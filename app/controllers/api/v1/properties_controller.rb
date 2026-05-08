@@ -5,6 +5,7 @@ module Api
       before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
       before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
+      before_action :authorize_owner_or_admin!, only: [:mark_sold, :archive, :unarchive]
 
       # GET /api/v1/properties
       def index
@@ -13,15 +14,59 @@ module Api
         # Public users only see approved listings. Owners can see their own drafts too.
         if current_user&.role_owner?
           scope = scope.where('approval_status = ? OR owner_id = ?', 'approved', current_user.id)
-        elsif current_user && (current_user.role_admin? || current_user.role_support?)
+        elsif current_user&.admin?
           # staff sees all
         else
           scope = scope.visible_to_public
         end
 
-        scope = scope.where(approval_status: Array(params[:status])) if params[:status].present? && current_user && (current_user.role_admin? || current_user.role_support?)
+        scope = scope.where(approval_status: Array(params[:status])) if params[:status].present? && current_user&.admin?
         scope = scope.where(country: params[:country]) if params[:country].present?
+        scope = scope.where(region: params[:region]) if params[:region].present?
         scope = scope.where(city: params[:city]) if params[:city].present?
+        scope = scope.where(purpose: params[:purpose]) if params[:purpose].present?
+        scope = scope.where(property_type: Array(params[:property_type])) if params[:property_type].present?
+
+        if params[:listing_status].present? && current_user&.admin?
+          scope = scope.where(listing_status: Array(params[:listing_status]))
+        end
+
+        if params[:min_price].present?
+          scope = scope.where('price >= ?', params[:min_price].to_d)
+        end
+        if params[:max_price].present?
+          scope = scope.where('price <= ?', params[:max_price].to_d)
+        end
+
+        if params[:min_bedrooms].present?
+          scope = scope.where('bedrooms >= ?', params[:min_bedrooms].to_i)
+        end
+        if params[:max_bedrooms].present?
+          scope = scope.where('bedrooms <= ?', params[:max_bedrooms].to_i)
+        end
+
+        if params[:min_bathrooms].present?
+          scope = scope.where('bathrooms >= ?', params[:min_bathrooms].to_i)
+        end
+        if params[:max_bathrooms].present?
+          scope = scope.where('bathrooms <= ?', params[:max_bathrooms].to_i)
+        end
+
+        if params[:min_area_sqm].present?
+          scope = scope.where('area_sqm >= ?', params[:min_area_sqm].to_d)
+        end
+        if params[:max_area_sqm].present?
+          scope = scope.where('area_sqm <= ?', params[:max_area_sqm].to_d)
+        end
+
+        # Feature filters: features[]=elevator&features[]=balcony
+        if params[:features].present?
+          keys = Array(params[:features]).map(&:to_s).reject(&:blank?)
+          keys.each do |k|
+            scope = scope.where("features ->> ? = 'true'", k)
+          end
+        end
+
         if params[:search].present?
           q = "%#{params[:search]}%"
           scope = scope.where('title ILIKE ? OR description ILIKE ? OR city ILIKE ? OR region ILIKE ?', q, q, q, q)
@@ -36,7 +81,12 @@ module Api
         end
 
         limit = [params[:limit]&.to_i || 50, 200].min
-        properties = scope.order(created_at: :desc).limit(limit)
+        properties = case params[:sort_by].to_s
+                     when 'price_asc' then scope.order(Arel.sql('price ASC NULLS LAST'), created_at: :desc)
+                     when 'price_desc' then scope.order(Arel.sql('price DESC NULLS LAST'), created_at: :desc)
+                     when 'newest' then scope.order(created_at: :desc)
+                     else scope.order(created_at: :desc)
+                     end.limit(limit)
 
         api_success(data: { properties: properties.map { |p| property_response(p) } }, status: :ok)
       end
@@ -109,6 +159,24 @@ module Api
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property rejected', status: :ok)
       end
 
+      # POST /api/v1/properties/:id/mark_sold
+      def mark_sold
+        @property.mark_sold!(by: current_user)
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property marked as sold', status: :ok)
+      end
+
+      # POST /api/v1/properties/:id/archive
+      def archive
+        @property.archive!(by: current_user)
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property archived', status: :ok)
+      end
+
+      # POST /api/v1/properties/:id/unarchive
+      def unarchive
+        @property.unarchive!
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property unarchived', status: :ok)
+      end
+
       # POST /api/v1/properties/:id/images
       def upload_images
         attach_images(@property)
@@ -162,20 +230,26 @@ module Api
       end
 
       def authorize_owner_or_staff!
-        return if current_user&.role_admin? || current_user&.role_support?
+        return if current_user&.admin?
         return if current_user&.role_owner? && @property.owner_id == current_user.id
         api_error(message: 'Unauthorized', status: :forbidden)
       end
 
       def authorize_staff!
-        return if current_user&.role_admin? || current_user&.role_support?
+        return if current_user&.admin?
+        api_error(message: 'Unauthorized', status: :forbidden)
+      end
+
+      def authorize_owner_or_admin!
+        return if current_user&.admin?
+        return if current_user&.role_owner? && @property.owner_id == current_user.id
         api_error(message: 'Unauthorized', status: :forbidden)
       end
 
       def can_view_property?(property)
         return true if property.approval_status_approved?
         return false if current_user.nil?
-        return true if current_user.role_admin? || current_user.role_support?
+        return true if current_user.admin?
         current_user.role_owner? && property.owner_id == current_user.id
       end
 
@@ -184,9 +258,11 @@ module Api
           :title,
           :description,
           :property_type,
+          :purpose,
           :bedrooms,
           :bathrooms,
           :area_sqft,
+          :area_sqm,
           :address1,
           :address2,
           :city,
@@ -196,7 +272,13 @@ module Api
           :latitude,
           :longitude,
           :price,
-          :currency
+          :currency,
+          :year_built,
+          :floor,
+          :total_floors,
+          :furnished,
+          :parking_spaces,
+          features: {}
         )
       end
 
@@ -228,12 +310,18 @@ module Api
           title: property.title,
           description: property.description,
           property_type: property.property_type,
+          purpose: property.purpose,
           bedrooms: property.bedrooms,
           bathrooms: property.bathrooms,
           area_sqft: property.area_sqft,
+          area_sqm: property.area_sqm,
           price: property.price,
           currency: property.currency,
           approval_status: property.approval_status,
+          listing_status: property.listing_status,
+          sold_at: property.sold_at&.iso8601,
+          archived_at: property.archived_at&.iso8601,
+          features: property.features || {},
           submitted_at: property.submitted_at&.iso8601,
           approved_at: property.approved_at&.iso8601,
           rejected_at: property.rejected_at&.iso8601,

@@ -2,7 +2,7 @@
   "info": {
     "name": "RealEstate API - Auth + Properties",
     "_postman_id": "real-estate-api-collection-v1",
-    "description": "Real-estate backend API collection (derived from vibes)\n\n## Roles\nAllowed roles: user, owner, support, admin\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP + password + device)\n- Properties (CRUD + media + approval)\n- Maps (properties only)\n",
+    "description": "Real-estate backend API collection\n\n## Roles\nAllowed roles: user, owner\nAdmin is a flag: users.is_admin=true\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP)\n- Properties (CRUD + media + approval + lifecycle)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -89,7 +89,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"property\": {\n    \"title\": \"2BHK Apartment\",\n    \"description\": \"Near metro\",\n    \"property_type\": \"apartment\",\n    \"bedrooms\": 2,\n    \"bathrooms\": 2,\n    \"area_sqft\": 950,\n    \"address1\": \"Street 1\",\n    \"city\": \"Mumbai\",\n    \"region\": \"MH\",\n    \"country\": \"IN\",\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"price\": 12000000,\n    \"currency\": \"INR\"\n  }\n}"
+              "raw": "{\n  \"property\": {\n    \"title\": \"2BHK Apartment\",\n    \"description\": \"Near metro\",\n    \"purpose\": \"sale\",\n    \"property_type\": \"apartment\",\n    \"bedrooms\": 2,\n    \"bathrooms\": 2,\n    \"area_sqm\": 88.0,\n    \"address1\": \"Street 1\",\n    \"city\": \"Mumbai\",\n    \"region\": \"MH\",\n    \"country\": \"IN\",\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"price\": 12000000,\n    \"currency\": \"INR\",\n    \"features\": { \"elevator\": true, \"balcony\": true }\n  }\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/properties", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"] }
           }
@@ -126,6 +126,27 @@
           }
         },
         {
+          "name": "Mark sold (owner/admin)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/mark_sold", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "mark_sold"] }
+          }
+        },
+        {
+          "name": "Archive (owner/admin)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/archive", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "archive"] }
+          }
+        },
+        {
+          "name": "Unarchive (owner/admin)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/unarchive", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "unarchive"] }
+          }
+        },
+        {
           "name": "Upload property images (multipart)",
           "request": {
             "method": "POST",
@@ -155,6 +176,86 @@
       ]
     },
     {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "List my favorites",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/favorites", "host": ["{{base_url}}"], "path": ["api", "v1", "favorites"] }
+          }
+        },
+        {
+          "name": "Favorite property",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/favorite", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "favorite"] }
+          }
+        },
+        {
+          "name": "Unfavorite property",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/favorite", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "favorite"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Viewings (appointments)",
+      "item": [
+        {
+          "name": "Request viewing (user)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"viewing\": {\n    \"requested_for\": \"2026-05-10T10:00:00Z\",\n    \"message\": \"I want to visit on Saturday morning\",\n    \"contact_phone\": \"1234567890\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/viewings", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "viewings"] }
+          }
+        },
+        {
+          "name": "My viewings",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/viewings/my", "host": ["{{base_url}}"], "path": ["api", "v1", "viewings", "my"] }
+          }
+        },
+        {
+          "name": "Property viewings (owner/admin)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/viewings", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "viewings"] }
+          }
+        },
+        {
+          "name": "Admin list viewings",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/viewings?limit=50", "host": ["{{base_url}}"], "path": ["api", "v1", "viewings"], "query": [{ "key": "limit", "value": "50" }] }
+          }
+        },
+        {
+          "name": "Admin update viewing",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"viewing\": {\n    \"status\": \"confirmed\",\n    \"admin_notes\": \"Confirmed with owner by phone\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/viewings/{{viewing_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "viewings", "{{viewing_id}}"] }
+          }
+        },
+        {
+          "name": "Cancel viewing",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/viewings/{{viewing_id}}/cancel", "host": ["{{base_url}}"], "path": ["api", "v1", "viewings", "{{viewing_id}}", "cancel"] }
+          }
+        }
+      ]
+    },
+    {
       "name": "Map",
       "item": [
         {
@@ -162,7 +263,17 @@
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
-            "url": { "raw": "{{base_url}}/api/v1/maps?limit=200", "host": ["{{base_url}}"], "path": ["api", "v1", "maps"], "query": [{ "key": "limit", "value": "200" }] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/maps?purpose=sale&min_price=0&sort_by=price_asc&limit=200",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "maps"],
+              "query": [
+                { "key": "purpose", "value": "sale" },
+                { "key": "min_price", "value": "0" },
+                { "key": "sort_by", "value": "price_asc" },
+                { "key": "limit", "value": "200" }
+              ]
+            }
           }
         },
         {

@@ -101,8 +101,8 @@ module Api
       end
 
       def require_support_or_admin!
-        unless current_user&.role_support? || current_user&.role_admin?
-          api_error(message: 'Only support team or admin can perform this action', status: :forbidden)
+        unless current_user&.admin?
+          api_error(message: 'Only admin can perform this action', status: :forbidden)
         end
       end
 

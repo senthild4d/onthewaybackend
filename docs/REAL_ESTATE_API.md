@@ -7,8 +7,7 @@
 
 - **user**: Can browse approved properties.
 - **owner**: Can create/update their properties and submit them for review.
-- **support**: Can review and approve/reject properties.
-- **admin**: Full access (same review powers as support).
+- **admin**: Not a role. It is `users.is_admin=true`. Admin can approve/reject, manage viewings, and manage support tickets.
 
 Allowed roles are enforced by the DB constraint on `users.role`.
 
@@ -51,6 +50,7 @@ Body (email):
 ```
 
 Allowed `role`: `user | owner | support | admin`
+Allowed `role`: `user | owner`
 
 ### Current user
 `GET /api/v1/auth/me`
@@ -65,14 +65,25 @@ Auth: `Authorization: Bearer <jwt>`
 - Public: only `approved`
 - Owner (authenticated): `approved` + their own (any status)
 - Support/Admin: all
+- Admin (`is_admin=true`): all
 
 Optional query:
 - `limit`
 - `search`
 - `country`
 - `city`
+- `region`
+- `purpose` (`sale|rent`)
+- `property_type` (repeatable)
+- `min_price` / `max_price`
+- `min_bedrooms` / `max_bedrooms`
+- `min_bathrooms` / `max_bathrooms`
+- `min_area_sqm` / `max_area_sqm`
+- `features[]` (repeatable, matches `features.<key>=true`)
+- `sort_by` (`newest|price_asc|price_desc`)
 - `north/south/east/west` (bounding box)
-- `status` (support/admin only)
+- `status` (admin only: approval status filter)
+- `listing_status` (admin only: `active|sold|archived`)
 
 ### Create property (owner)
 `POST /api/v1/properties`
@@ -85,9 +96,11 @@ Auth: owner only
     "title": "2BHK Apartment",
     "description": "Near metro",
     "property_type": "apartment",
+    "purpose": "sale",
     "bedrooms": 2,
     "bathrooms": 2,
     "area_sqft": 950,
+    "area_sqm": 88.0,
     "address1": "Street 1",
     "address2": "",
     "city": "Mumbai",
@@ -97,7 +110,8 @@ Auth: owner only
     "latitude": 19.076,
     "longitude": 72.8777,
     "price": 12000000,
-    "currency": "INR"
+    "currency": "INR",
+    "features": { "elevator": true, "balcony": true }
   }
 }
 ```
@@ -116,6 +130,71 @@ Moves `draft/rejected → pending_review`.
 ```json
 { "reason": "Missing documents" }
 ```
+
+### Mark sold (owner/admin)
+`POST /api/v1/properties/:id/mark_sold`
+
+### Archive (owner/admin)
+`POST /api/v1/properties/:id/archive`
+
+### Unarchive (owner/admin)
+`POST /api/v1/properties/:id/unarchive`
+
+## Favorites
+
+### List my favorites
+`GET /api/v1/favorites`
+
+### Favorite a property
+`POST /api/v1/properties/:property_id/favorite`
+
+### Unfavorite a property
+`DELETE /api/v1/properties/:property_id/favorite`
+
+## Viewings (appointments)
+
+### Request a viewing (user)
+`POST /api/v1/properties/:property_id/viewings`
+
+```json
+{
+  "viewing": {
+    "requested_for": "2026-05-10T10:00:00Z",
+    "message": "I want to visit on Saturday morning",
+    "contact_phone": "1234567890"
+  }
+}
+```
+
+### My viewings (user)
+`GET /api/v1/viewings/my`
+
+### Viewings for a property (owner/admin)
+`GET /api/v1/properties/:property_id/viewings`
+
+### Admin list viewings
+`GET /api/v1/viewings`
+
+Optional query:
+- `status`
+- `property_id`
+- `user_id`
+- `limit`
+
+### Admin update viewing status
+`PATCH /api/v1/viewings/:id`
+
+```json
+{
+  "viewing": {
+    "status": "confirmed",
+    "admin_notes": "Confirmed with owner by phone"
+  }
+}
+```
+
+### Cancel viewing (user/admin)
+`POST /api/v1/viewings/:id/cancel`
 
 ## Property media
 

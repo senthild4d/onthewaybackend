@@ -2,9 +2,13 @@ class Property < ApplicationRecord
   belongs_to :owner, class_name: 'User'
   belongs_to :approved_by, class_name: 'User', optional: true
   belongs_to :rejected_by, class_name: 'User', optional: true
+  belongs_to :sold_by, class_name: 'User', optional: true
+  belongs_to :archived_by, class_name: 'User', optional: true
 
   has_many_attached :images
   has_one_attached :video
+  has_many :favorites, dependent: :destroy
+  has_many :viewings, class_name: 'PropertyViewing', dependent: :destroy
 
   enum :approval_status, {
     draft: 'draft',
@@ -14,21 +18,32 @@ class Property < ApplicationRecord
     archived: 'archived'
   }, prefix: true
 
+  enum :purpose, { sale: 'sale', rent: 'rent' }, prefix: true
+  enum :listing_status, { active: 'active', sold: 'sold', archived: 'archived' }, prefix: true
+
   validates :title, presence: true, length: { maximum: 255 }
   validates :currency, presence: true
   validates :approval_status, inclusion: { in: approval_statuses.keys }
+  validates :purpose, inclusion: { in: purposes.keys }
+  validates :listing_status, inclusion: { in: listing_statuses.keys }
   validates :bedrooms, :bathrooms, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :area_sqft, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :area_sqm, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :price, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :latitude, numericality: { greater_than_or_equal_to: -90, less_than_or_equal_to: 90 }, allow_nil: true
   validates :longitude, numericality: { greater_than_or_equal_to: -180, less_than_or_equal_to: 180 }, allow_nil: true
+  validates :year_built, numericality: { only_integer: true, greater_than_or_equal_to: 1600 }, allow_nil: true
+  validates :floor, numericality: { only_integer: true, greater_than_or_equal_to: -5 }, allow_nil: true
+  validates :total_floors, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
+  validates :parking_spaces, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
 
   validate :images_count_limit
   validate :images_size_limit
   validate :video_size_limit
   validate :video_content_type
+  validate :features_format
 
-  scope :visible_to_public, -> { where(approval_status: 'approved') }
+  scope :visible_to_public, -> { where(approval_status: 'approved', listing_status: 'active') }
 
   def coordinates?
     latitude.present? && longitude.present?
@@ -55,6 +70,30 @@ class Property < ApplicationRecord
       rejected_by: by,
       rejected_at: Time.current,
       rejection_reason: reason.to_s.presence
+    )
+  end
+
+  def mark_sold!(by:)
+    update!(
+      listing_status: 'sold',
+      sold_by: by,
+      sold_at: Time.current
+    )
+  end
+
+  def archive!(by:)
+    update!(
+      listing_status: 'archived',
+      archived_by: by,
+      archived_at: Time.current
+    )
+  end
+
+  def unarchive!
+    update!(
+      listing_status: 'active',
+      archived_by: nil,
+      archived_at: nil
     )
   end
 
@@ -88,6 +127,12 @@ class Property < ApplicationRecord
     ct = video.content_type.to_s
     return if ct.start_with?('video/')
     errors.add(:video, 'must be a video file')
+  end
+
+  def features_format
+    return if features.blank?
+    return if features.is_a?(Hash)
+    errors.add(:features, 'must be an object')
   end
 end
 

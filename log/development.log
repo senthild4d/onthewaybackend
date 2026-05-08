@@ -1170,3 +1170,451 @@ Migrating to RemoveVibesEventSocialDomainTables (20260508000010)
   [1m[36mTRANSACTION (51.6ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
   [1m[35m (0.3ms)[0m  [1m[34mSELECT pg_advisory_unlock(8202035705506761720) /*application='Vibes'*/[0m
   [1m[36mActiveRecord::SchemaMigration Load (0.5ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[35mSQL (0.3ms)[0m  [1m[35mSET search_path TO public /*application='Vibes'*/[0m
+  [1m[35m (287.0ms)[0m  [1m[35mCREATE DATABASE "ontheway_development" ENCODING = 'unicode' /*application='Vibes'*/[0m
+  [1m[35mSQL (0.1ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "plpgsql" SCHEMA pg_catalog /*application='Vibes'*/[0m
+  [1m[35mSQL (484.7ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "pgcrypto" /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_attachments" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (10.3ms)[0m  [1m[35mCREATE TABLE "active_storage_attachments" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying NOT NULL, "record_type" character varying NOT NULL, "record_id" uuid NOT NULL, "blob_id" uuid NOT NULL, "created_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE INDEX "index_active_storage_attachments_on_blob_id" ON "active_storage_attachments" ("blob_id") /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_attachments_uniqueness" ON "active_storage_attachments" ("record_type", "record_id", "name", "blob_id") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_blobs" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.0ms)[0m  [1m[35mCREATE TABLE "active_storage_blobs" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "key" character varying NOT NULL, "filename" character varying NOT NULL, "content_type" character varying, "metadata" text, "service_name" character varying NOT NULL, "byte_size" bigint NOT NULL, "checksum" character varying, "created_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_blobs_on_key" ON "active_storage_blobs" ("key") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_variant_records" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.8ms)[0m  [1m[35mCREATE TABLE "active_storage_variant_records" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "blob_id" uuid NOT NULL, "variation_digest" character varying NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_variant_records_uniqueness" ON "active_storage_variant_records" ("blob_id", "variation_digest") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "allergens" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (5.0ms)[0m  [1m[35mCREATE TABLE "allergens" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "code" character varying NOT NULL, "label" character varying NOT NULL, "description" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_allergens_on_code" ON "allergens" ("code") /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_allergens_on_label" ON "allergens" ("label") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "artist_categories" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.1ms)[0m  [1m[35mCREATE TABLE "artist_categories" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "category_id" uuid NOT NULL, "source" character varying DEFAULT 'onboarding' NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_artist_categories_on_category_id" ON "artist_categories" ("category_id") /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_artist_categories_on_user_id_and_category_id" ON "artist_categories" ("user_id", "category_id") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_artist_categories_on_user_id" ON "artist_categories" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "categories" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.1ms)[0m  [1m[35mCREATE TABLE "categories" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "categories_group_id" uuid NOT NULL, "name" character varying NOT NULL, "slug" character varying NOT NULL, "icon_key" character varying, "display_order" integer DEFAULT 0 NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_categories_on_categories_group_id_and_name" ON "categories" ("categories_group_id", "name") /*application='Vibes'*/[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_categories_on_display_order" ON "categories" ("display_order") /*application='Vibes'*/[0m
+  [1m[35m (3.1ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_categories_on_slug" ON "categories" ("slug") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "categories_groups" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (5.6ms)[0m  [1m[35mCREATE TABLE "categories_groups" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying NOT NULL, "slug" character varying NOT NULL, "description" text, "display_order" integer DEFAULT 0 NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE INDEX "index_categories_groups_on_display_order" ON "categories_groups" ("display_order") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_categories_groups_on_slug" ON "categories_groups" ("slug") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "crypto_wallets" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (6.1ms)[0m  [1m[35mCREATE TABLE "crypto_wallets" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "crypto_currency" character varying NOT NULL, "wallet_address" character varying NOT NULL, "wallet_type" character varying DEFAULT 'external' NOT NULL, "network" character varying, "status" character varying DEFAULT 'active' NOT NULL, "metadata" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_crypto_wallet_currency CHECK (crypto_currency::text = ANY (ARRAY['BTC'::character varying::text, 'ETH'::character varying::text, 'USDT'::character varying::text, 'USDC'::character varying::text, 'SOL'::character varying::text, 'MATIC'::character varying::text, 'BNB'::character varying::text])), CONSTRAINT check_crypto_wallet_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text, 'archived'::character varying::text])), CONSTRAINT check_crypto_wallet_type CHECK (wallet_type::text = ANY (ARRAY['external'::character varying::text, 'internal'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_crypto_wallets_on_status" ON "crypto_wallets" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE INDEX "index_crypto_wallets_user_crypto" ON "crypto_wallets" ("user_id", "crypto_currency") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_crypto_wallets_on_user_id" ON "crypto_wallets" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_crypto_wallets_on_wallet_address" ON "crypto_wallets" ("wallet_address") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "devices" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (6.8ms)[0m  [1m[35mCREATE TABLE "devices" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "device_uuid" character varying NOT NULL, "device_name" character varying, "device_type" character varying, "platform" character varying NOT NULL, "platform_version" character varying, "app_version" character varying, "biometric_enabled" boolean DEFAULT FALSE NOT NULL, "last_used_at" timestamp(6), "token_hash" character varying NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "pin_hash" character varying, "fcm_token" character varying) /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_devices_on_device_uuid" ON "devices" ("device_uuid") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_devices_on_fcm_token" ON "devices" ("fcm_token") WHERE (fcm_token IS NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_devices_on_status" ON "devices" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_devices_on_token_hash" ON "devices" ("token_hash") /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_devices_on_user_id_and_device_uuid" ON "devices" ("user_id", "device_uuid") /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE INDEX "index_devices_on_user_id" ON "devices" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "legal_documents" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.2ms)[0m  [1m[35mCREATE TABLE "legal_documents" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "kind" character varying NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_legal_documents_on_kind" ON "legal_documents" ("kind") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "notifications" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (8.1ms)[0m  [1m[35mCREATE TABLE "notifications" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "notification_type" character varying NOT NULL, "title" character varying NOT NULL, "message" text NOT NULL, "metadata" jsonb DEFAULT '{}' NOT NULL, "read" boolean DEFAULT FALSE NOT NULL, "read_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (3.4ms)[0m  [1m[35mCREATE INDEX "index_notifications_on_created_at" ON "notifications" ("created_at") /*application='Vibes'*/[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE INDEX "index_notifications_on_notification_type" ON "notifications" ("notification_type") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_notifications_on_read" ON "notifications" ("read") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_notifications_on_user_id_and_read" ON "notifications" ("user_id", "read") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_notifications_on_user_id" ON "notifications" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "otps" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (6.3ms)[0m  [1m[35mCREATE TABLE "otps" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "phone" character varying, "code" character varying NOT NULL, "expires_at" timestamp(6) NOT NULL, "verified" boolean DEFAULT FALSE NOT NULL, "user_id" uuid, "attempts" integer DEFAULT 0 NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "email" character varying, CONSTRAINT check_phone_or_email CHECK (phone IS NOT NULL OR email IS NOT NULL)) /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_otps_on_email_and_code" ON "otps" ("email", "code") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_otps_on_expires_at" ON "otps" ("expires_at") /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE INDEX "index_otps_on_phone_and_code" ON "otps" ("phone", "code") /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE INDEX "index_otps_on_phone" ON "otps" ("phone") /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE INDEX "index_otps_on_user_id" ON "otps" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_methods" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.7ms)[0m  [1m[35mCREATE TABLE "payment_methods" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "payment_method_type" character varying NOT NULL, "provider" character varying NOT NULL, "provider_payment_method_id" character varying NOT NULL, "card_brand" character varying, "card_last4" character varying, "card_exp_month" character varying, "card_exp_year" character varying, "billing_name" character varying, "billing_email" character varying, "billing_phone" character varying, "billing_address" jsonb DEFAULT '{}', "metadata" jsonb DEFAULT '{}', "is_default" boolean DEFAULT FALSE NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_payment_method_type CHECK (payment_method_type::text = ANY (ARRAY['credit_card'::character varying::text, 'debit_card'::character varying::text, 'bank_account'::character varying::text, 'crypto_wallet'::character varying::text, 'paypal'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text])), CONSTRAINT check_payment_method_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text, 'expired'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_payment_methods_on_is_default" ON "payment_methods" ("is_default") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_payment_methods_on_payment_method_type" ON "payment_methods" ("payment_method_type") /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE INDEX "index_payment_methods_on_provider" ON "payment_methods" ("provider") /*application='Vibes'*/[0m
+  [1m[35m (2.1ms)[0m  [1m[35mCREATE INDEX "index_payment_methods_on_status" ON "payment_methods" ("status") /*application='Vibes'*/[0m
+  [1m[35m (7.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_payment_methods_user_provider_unique" ON "payment_methods" ("user_id", "provider", "provider_payment_method_id") /*application='Vibes'*/[0m
+  [1m[35m (3.5ms)[0m  [1m[35mCREATE INDEX "index_payment_methods_on_user_id" ON "payment_methods" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_providers" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (16.3ms)[0m  [1m[35mCREATE TABLE "payment_providers" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying NOT NULL, "provider_type" character varying NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "credentials" jsonb DEFAULT '{}' NOT NULL, "settings" jsonb DEFAULT '{}' NOT NULL, "is_default" boolean DEFAULT FALSE NOT NULL, "description" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_payment_provider_type CHECK (provider_type::text = ANY (ARRAY['stripe'::character varying::text, 'paypal'::character varying::text, 'crypto'::character varying::text, 'bank'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text, 'other'::character varying::text])), CONSTRAINT check_payment_provider_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text, 'maintenance'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (2.3ms)[0m  [1m[35mCREATE INDEX "index_payment_providers_on_is_default" ON "payment_providers" ("is_default") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_payment_providers_on_name" ON "payment_providers" ("name") /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_payment_providers_on_provider_type" ON "payment_providers" ("provider_type") /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_payment_providers_on_status" ON "payment_providers" ("status") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_transactions" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (8.2ms)[0m  [1m[35mCREATE TABLE "payment_transactions" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "wallet_id" uuid NOT NULL, "user_id" uuid NOT NULL, "transaction_type" character varying NOT NULL, "status" character varying DEFAULT 'pending' NOT NULL, "amount" decimal(20,8) NOT NULL, "currency" character varying DEFAULT 'USD' NOT NULL, "payment_method" character varying NOT NULL, "payment_provider" character varying, "provider_transaction_id" character varying, "provider_response" text, "reference_type" character varying, "reference_id" uuid, "description" text, "metadata" text, "fee" decimal(20,8) DEFAULT 0.0 NOT NULL, "net_amount" decimal(20,8) NOT NULL, "processed_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_payment_transaction_amount_positive CHECK (amount > 0::numeric), CONSTRAINT check_payment_transaction_fee_non_negative CHECK (fee >= 0::numeric), CONSTRAINT check_payment_transaction_method CHECK (payment_method::text = ANY (ARRAY['credit_card'::character varying::text, 'debit_card'::character varying::text, 'bank_transfer'::character varying::text, 'crypto'::character varying::text, 'paypal'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text, 'other'::character varying::text])), CONSTRAINT check_payment_transaction_status CHECK (status::text = ANY (ARRAY['pending'::character varying::text, 'processing'::character varying::text, 'completed'::character varying::text, 'failed'::character varying::text, 'cancelled'::character varying::text, 'refunded'::character varying::text])), CONSTRAINT check_payment_transaction_type CHECK (transaction_type::text = ANY (ARRAY['deposit'::character varying::text, 'withdrawal'::character varying::text, 'payment'::character varying::text, 'refund'::character varying::text, 'transfer'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (2.1ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_created_at" ON "payment_transactions" ("created_at") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_payment_method" ON "payment_transactions" ("payment_method") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_payment_provider" ON "payment_transactions" ("payment_provider") /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_provider_transaction_id" ON "payment_transactions" ("provider_transaction_id") /*application='Vibes'*/[0m
+  [1m[35m (2.5ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_reference_type_and_reference_id" ON "payment_transactions" ("reference_type", "reference_id") /*application='Vibes'*/[0m
+  [1m[35m (3.1ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_status" ON "payment_transactions" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_transaction_type" ON "payment_transactions" ("transaction_type") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_user_id" ON "payment_transactions" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_payment_transactions_on_wallet_id" ON "payment_transactions" ("wallet_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "properties" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (7.4ms)[0m  [1m[35mCREATE TABLE "properties" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "owner_id" uuid NOT NULL, "title" character varying NOT NULL, "description" text, "property_type" character varying, "bedrooms" integer, "bathrooms" integer, "area_sqft" decimal(12,2), "address1" character varying, "address2" character varying, "city" character varying, "region" character varying, "postal_code" character varying, "country" character varying, "latitude" decimal(10,7), "longitude" decimal(10,7), "price" decimal(12,2), "currency" character varying DEFAULT 'USD' NOT NULL, "approval_status" character varying DEFAULT 'draft' NOT NULL, "submitted_at" timestamp(6), "approved_by_id" uuid, "approved_at" timestamp(6), "rejected_by_id" uuid, "rejected_at" timestamp(6), "rejection_reason" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_properties_approval_status CHECK (approval_status::text = ANY (ARRAY['draft'::character varying, 'pending_review'::character varying, 'approved'::character varying, 'rejected'::character varying, 'archived'::character varying]::text[])), CONSTRAINT check_properties_latitude CHECK (latitude IS NULL OR latitude >= '-90'::integer::numeric AND latitude <= 90::numeric), CONSTRAINT check_properties_longitude CHECK (longitude IS NULL OR longitude >= '-180'::integer::numeric AND longitude <= 180::numeric), CONSTRAINT check_properties_price_non_negative CHECK (price IS NULL OR price >= 0::numeric)) /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_properties_on_approval_status" ON "properties" ("approval_status") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_properties_on_latitude_and_longitude" ON "properties" ("latitude", "longitude") /*application='Vibes'*/[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_properties_on_owner_id" ON "properties" ("owner_id") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "split_qr_codes" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.9ms)[0m  [1m[35mCREATE TABLE "split_qr_codes" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "food_bar_order_id" uuid NOT NULL, "qr_token" character varying NOT NULL, "max_participants" integer, "current_participants" integer DEFAULT 1 NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "expires_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_split_qr_participants CHECK (current_participants <= max_participants OR max_participants IS NULL), CONSTRAINT check_split_qr_code_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'completed'::character varying::text, 'expired'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE INDEX "index_split_qr_codes_on_food_bar_order_id" ON "split_qr_codes" ("food_bar_order_id") /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_split_qr_codes_on_qr_token" ON "split_qr_codes" ("qr_token") /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mCREATE INDEX "index_split_qr_codes_on_status" ON "split_qr_codes" ("status") /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "support_tickets" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (5.4ms)[0m  [1m[35mCREATE TABLE "support_tickets" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid, "related_type" character varying, "related_id" uuid, "reason" character varying NOT NULL, "status" character varying DEFAULT 'open' NOT NULL, "priority" character varying DEFAULT 'medium' NOT NULL, "custom_reason" text, "description" text, "assigned_to_id" uuid, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mCREATE INDEX "index_support_tickets_on_assigned_to_id" ON "support_tickets" ("assigned_to_id") /*application='Vibes'*/[0m
+  [1m[35m (3.1ms)[0m  [1m[35mCREATE INDEX "index_support_tickets_on_reason" ON "support_tickets" ("reason") /*application='Vibes'*/[0m
+  [1m[35m (2.1ms)[0m  [1m[35mCREATE INDEX "index_support_tickets_on_related_type_and_related_id" ON "support_tickets" ("related_type", "related_id") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_support_tickets_on_status" ON "support_tickets" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mCREATE INDEX "index_support_tickets_on_user_id" ON "support_tickets" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "user_blocks" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.7ms)[0m  [1m[35mCREATE TABLE "user_blocks" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "blocker_id" uuid NOT NULL, "blocked_id" uuid NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_user_blocks_on_blocked_id" ON "user_blocks" ("blocked_id") /*application='Vibes'*/[0m
+  [1m[35m (2.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_user_blocks_blocker_blocked_unique" ON "user_blocks" ("blocker_id", "blocked_id") /*application='Vibes'*/[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE INDEX "index_user_blocks_on_blocker_id" ON "user_blocks" ("blocker_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "user_deactivations" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (5.4ms)[0m  [1m[35mCREATE TABLE "user_deactivations" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "reason" character varying, "additional_feedback" text, "deactivated_at" timestamp(6) NOT NULL, "reactivated_at" timestamp(6), "reactivated_by" character varying, "reactivation_notes" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE INDEX "index_user_deactivations_on_deactivated_at" ON "user_deactivations" ("deactivated_at") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE INDEX "index_user_deactivations_on_reactivated_at" ON "user_deactivations" ("reactivated_at") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_user_deactivations_on_reason" ON "user_deactivations" ("reason") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_user_deactivations_on_user_id" ON "user_deactivations" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "user_reports" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (6.1ms)[0m  [1m[35mCREATE TABLE "user_reports" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "reporter_id" uuid NOT NULL, "reported_id" uuid NOT NULL, "reason" character varying NOT NULL, "description" text, "status" character varying DEFAULT 'pending' NOT NULL, "reviewed_by_id" uuid, "admin_notes" text, "reviewed_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_user_report_reason CHECK (reason::text = ANY (ARRAY['spam'::character varying::text, 'harassment'::character varying::text, 'inappropriate'::character varying::text, 'fake_account'::character varying::text, 'other'::character varying::text])), CONSTRAINT check_user_report_status CHECK (status::text = ANY (ARRAY['pending'::character varying::text, 'reviewed'::character varying::text, 'resolved'::character varying::text, 'dismissed'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (2.3ms)[0m  [1m[35mCREATE INDEX "index_user_reports_on_reported_id" ON "user_reports" ("reported_id") /*application='Vibes'*/[0m
+  [1m[35m (3.8ms)[0m  [1m[35mCREATE INDEX "index_user_reports_reporter_reported" ON "user_reports" ("reporter_id", "reported_id") /*application='Vibes'*/[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE INDEX "index_user_reports_on_reporter_id" ON "user_reports" ("reporter_id") /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE INDEX "index_user_reports_on_status" ON "user_reports" ("status") /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[35mDROP TABLE IF EXISTS "users" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (7.1ms)[0m  [1m[35mCREATE TABLE "users" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "email" character varying, "phone" character varying(20), "password_digest" character varying, "name" character varying, "role" character varying DEFAULT 'consumer' NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "preferences" jsonb DEFAULT '{}', "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "current_location" jsonb DEFAULT '{}' NOT NULL, "username" character varying, "date_of_birth" date, "profile_picture_url" character varying, "bio" text, "support_countries" jsonb DEFAULT '[]' NOT NULL, CONSTRAINT check_email_format CHECK (email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'::text), CONSTRAINT check_user_phone_or_email CHECK (phone IS NOT NULL OR email IS NOT NULL), CONSTRAINT check_role CHECK (role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying, 'support'::character varying, 'admin'::character varying]::text[])), CONSTRAINT check_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'disabled'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_users_on_created_at" ON "users" ("created_at") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_users_on_email" ON "users" ("email") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_users_on_phone" ON "users" ("phone") WHERE (phone IS NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE INDEX "index_users_on_role" ON "users" ("role") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_users_on_status" ON "users" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_users_on_username" ON "users" ("username") WHERE (username IS NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCOMMENT ON COLUMN "users"."support_countries" IS 'Country codes (e.g. UK, US) this support user can moderate' /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "wallets" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (6.4ms)[0m  [1m[35mCREATE TABLE "wallets" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "currency" character varying DEFAULT 'USD' NOT NULL, "balance" decimal(20,8) DEFAULT 0.0 NOT NULL, "locked_balance" decimal(20,8) DEFAULT 0.0 NOT NULL, "status" character varying DEFAULT 'active' NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, CONSTRAINT check_wallet_balance_non_negative CHECK (balance >= 0::numeric), CONSTRAINT check_wallet_locked_balance_non_negative CHECK (locked_balance >= 0::numeric), CONSTRAINT check_wallet_status CHECK (status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text, 'closed'::character varying::text]))) /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_wallets_on_status" ON "wallets" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_wallets_user_currency_unique" ON "wallets" ("user_id", "currency") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_wallets_on_user_id" ON "wallets" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (10.4ms)[0m  [1m[35mALTER TABLE "active_storage_attachments" ADD CONSTRAINT "fk_rails_c3b3935057"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+ /*application='Vibes'*/[0m
+  [1m[35m (2.5ms)[0m  [1m[35mALTER TABLE "active_storage_variant_records" ADD CONSTRAINT "fk_rails_993965df05"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+ /*application='Vibes'*/[0m
+  [1m[35m (3.7ms)[0m  [1m[35mALTER TABLE "artist_categories" ADD CONSTRAINT "fk_rails_9f28db89a8"
+FOREIGN KEY ("category_id")
+  REFERENCES "categories" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.9ms)[0m  [1m[35mALTER TABLE "artist_categories" ADD CONSTRAINT "fk_rails_deaffd0dd3"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.0ms)[0m  [1m[35mALTER TABLE "categories" ADD CONSTRAINT "fk_rails_543a8f1ff5"
+FOREIGN KEY ("categories_group_id")
+  REFERENCES "categories_groups" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.4ms)[0m  [1m[35mALTER TABLE "crypto_wallets" ADD CONSTRAINT "fk_rails_8e6f1aa004"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.8ms)[0m  [1m[35mALTER TABLE "devices" ADD CONSTRAINT "fk_rails_410b63ef65"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ /*application='Vibes'*/[0m
+  [1m[35m (2.8ms)[0m  [1m[35mALTER TABLE "notifications" ADD CONSTRAINT "fk_rails_b080fb4855"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.4ms)[0m  [1m[35mALTER TABLE "otps" ADD CONSTRAINT "fk_rails_18565c823d"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ /*application='Vibes'*/[0m
+  [1m[35m (4.1ms)[0m  [1m[35mALTER TABLE "payment_methods" ADD CONSTRAINT "fk_rails_e13d4c515f"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (7.5ms)[0m  [1m[35mALTER TABLE "payment_transactions" ADD CONSTRAINT "fk_rails_5baf18894b"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE RESTRICT /*application='Vibes'*/[0m
+  [1m[35m (2.6ms)[0m  [1m[35mALTER TABLE "payment_transactions" ADD CONSTRAINT "fk_rails_03caedff8c"
+FOREIGN KEY ("wallet_id")
+  REFERENCES "wallets" ("id")
+ ON DELETE RESTRICT /*application='Vibes'*/[0m
+  [1m[35m (4.1ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT "fk_rails_442d3c1cc5"
+FOREIGN KEY ("approved_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT "fk_rails_45d6dffcf8"
+FOREIGN KEY ("owner_id")
+  REFERENCES "users" ("id")
+ /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT "fk_rails_110b11e92a"
+FOREIGN KEY ("rejected_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mALTER TABLE "user_blocks" ADD CONSTRAINT "fk_rails_9457ce6a10"
+FOREIGN KEY ("blocked_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.2ms)[0m  [1m[35mALTER TABLE "user_blocks" ADD CONSTRAINT "fk_rails_d1bf232861"
+FOREIGN KEY ("blocker_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.5ms)[0m  [1m[35mALTER TABLE "user_deactivations" ADD CONSTRAINT "fk_rails_50def79879"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.8ms)[0m  [1m[35mALTER TABLE "user_reports" ADD CONSTRAINT "fk_rails_bae89a080d"
+FOREIGN KEY ("reported_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mALTER TABLE "user_reports" ADD CONSTRAINT "fk_rails_f3c1fb8852"
+FOREIGN KEY ("reporter_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.1ms)[0m  [1m[35mALTER TABLE "user_reports" ADD CONSTRAINT "fk_rails_4596ac6572"
+FOREIGN KEY ("reviewed_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mALTER TABLE "wallets" ADD CONSTRAINT "fk_rails_732f6628c4"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (4.4ms)[0m  [1m[35mCREATE TABLE "schema_migrations" ("version" character varying NOT NULL PRIMARY KEY) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (1.0ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES (20260508000010) /*application='Vibes'*/[0m
+  [1m[35m (4.1ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES
+(20260508000001),
+(20260508000000),
+(20260504120000),
+(20260415000000),
+(20260414130000),
+(20260413120000),
+(20260331090000),
+(20260330140000),
+(20260330120000),
+(20260326000000),
+(20260315000000),
+(20260314000000),
+(20260313000000),
+(20260312100000),
+(20260311120000),
+(20260309120000),
+(20260309100000),
+(20260306190000),
+(20260306183000),
+(20260306172104),
+(20260220100002),
+(20260220100001),
+(20260220100000),
+(20260220000001),
+(20260218000001),
+(20260217000001),
+(20260216000001),
+(20260210000000),
+(20260206100000),
+(20260205100000),
+(20260203093000),
+(20260129121000),
+(20260127132500),
+(20260127132000),
+(20260127124500),
+(20260127123000),
+(20260127120000),
+(20260122090000),
+(20260122050000),
+(20251231000000),
+(20251230000000),
+(20251229000000),
+(20251218130000),
+(20251218120000),
+(20251218100000),
+(20251218000002),
+(20251218000001),
+(20251215062315),
+(20251203180000),
+(20251203160000),
+(20251203151200),
+(20251203143411),
+(20251203123900),
+(20251203123336),
+(20251203120828),
+(20251203120827),
+(20251203120826),
+(20251203090909),
+(20251203090847),
+(20251203090340),
+(20251203090251),
+(20251120250000),
+(20251120240000),
+(20251120230000),
+(20251120220000),
+(20251120210000),
+(20251120200000),
+(20251120190000),
+(20251120180100),
+(20251120180000),
+(20251120170400),
+(20251120170300),
+(20251120170200),
+(20251120170100),
+(20251120170000),
+(20251120160400),
+(20251120160300),
+(20251120160200),
+(20251120160100),
+(20251120160000),
+(20251120150300),
+(20251120150200),
+(20251120150100),
+(20251120150000),
+(20251120140000),
+(20251120130000),
+(20251120120000),
+(20251120103118),
+(20251118035024),
+(20251117172100),
+(20251117172000),
+(20251117171000),
+(20251117170000),
+(20251117165342),
+(20251117165259),
+(20251112093200),
+(20251112093000),
+(20251112090000),
+(20251103113828),
+(20251103113341),
+(20251103113124),
+(20251029102348),
+(20251013124400); /*application='Vibes'*/[0m
+  [1m[35m (3.7ms)[0m  [1m[35mCREATE TABLE "ar_internal_metadata" ("key" character varying NOT NULL PRIMARY KEY, "value" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.6ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Create (0.3ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('environment', 'development', '2026-05-08 12:47:17.465650', '2026-05-08 12:47:17.465652') RETURNING "key" /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.2ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'schema_sha1' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Create (0.3ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('schema_sha1', 'e93a102891fe924dec0913f21fc044d3584b4620', '2026-05-08 12:47:17.474344', '2026-05-08 12:47:17.474346') RETURNING "key" /*application='Vibes'*/[0m
+  [1m[35m (0.3ms)[0m  [1m[34mSELECT pg_try_advisory_lock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.1ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+Migrating to RemoveUnusedVibesTablesRemaining (20260508000020)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (3.6ms)[0m  [1m[35mDROP TABLE IF EXISTS "notifications" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[35mDROP TABLE IF EXISTS "wallets" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.4ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_transactions" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.6ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_methods" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mDROP TABLE IF EXISTS "payment_providers" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mDROP TABLE IF EXISTS "crypto_wallets" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (3.4ms)[0m  [1m[35mDROP TABLE IF EXISTS "categories" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mDROP TABLE IF EXISTS "categories_groups" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (2.5ms)[0m  [1m[35mDROP TABLE IF EXISTS "artist_categories" CASCADE /*application='Vibes'*/[0m
+  [1m[35m (0.6ms)[0m  [1m[35mDROP TABLE IF EXISTS "allergens" CASCADE /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260508000020') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (21.0ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+  [1m[35m (0.3ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[35m (6.1ms)[0m  [1m[34mSELECT pg_try_advisory_lock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (48.9ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (2.2ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+Migrating to AddIsAdminAndLimitRolesToUserOwner (20260508000031)
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (21.7ms)[0m  [1m[35mALTER TABLE "users" ADD "is_admin" boolean DEFAULT FALSE NOT NULL /*application='Vibes'*/[0m
+  [1m[35m (3.0ms)[0m  [1m[35mCREATE INDEX "index_users_on_is_admin" ON "users" ("is_admin") /*application='Vibes'*/[0m
+  [1m[35m (1.9ms)[0m  [1m[33mUPDATE users
+SET is_admin = TRUE
+WHERE role IN ('admin', 'support');
+ /*application='Vibes'*/[0m
+  [1m[35m (1.3ms)[0m  [1m[35mALTER TABLE users DROP CONSTRAINT IF EXISTS check_role /*application='Vibes'*/[0m
+  [1m[35m (0.6ms)[0m  [1m[33mUPDATE users
+SET role = 'user'
+WHERE role IS NULL OR role NOT IN ('user','owner');
+ /*application='Vibes'*/[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE users
+ADD CONSTRAINT check_role
+CHECK (role IN ('user', 'owner'))
+ /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.4ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260508000031') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (0.6ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+Migrating to ExtendPropertiesForFiltersAndLifecycle (20260508000032)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (6.2ms)[0m  [1m[35mALTER TABLE "properties" ADD "purpose" character varying DEFAULT 'sale' NOT NULL, ADD "listing_status" character varying DEFAULT 'active' NOT NULL, ADD "sold_at" timestamp(6), ADD "sold_by_id" uuid, ADD "archived_at" timestamp(6), ADD "archived_by_id" uuid, ADD "area_sqm" decimal(12,2), ADD "year_built" integer, ADD "floor" integer, ADD "total_floors" integer, ADD "furnished" boolean, ADD "parking_spaces" integer, ADD "features" jsonb DEFAULT '{}' NOT NULL /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE INDEX "index_properties_on_purpose" ON "properties" ("purpose") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_properties_on_listing_status" ON "properties" ("listing_status") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_properties_on_archived_at" ON "properties" ("archived_at") /*application='Vibes'*/[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_properties_on_sold_at" ON "properties" ("sold_at") /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE INDEX "index_properties_on_sold_by_id" ON "properties" ("sold_by_id") /*application='Vibes'*/[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_properties_on_archived_by_id" ON "properties" ("archived_by_id") /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE INDEX "index_properties_on_area_sqm" ON "properties" ("area_sqm") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_properties_on_bedrooms" ON "properties" ("bedrooms") /*application='Vibes'*/[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_properties_on_bathrooms" ON "properties" ("bathrooms") /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE INDEX "index_properties_on_property_type" ON "properties" ("property_type") /*application='Vibes'*/[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE INDEX "index_properties_on_price" ON "properties" ("price") /*application='Vibes'*/[0m
+  [1m[35m (6.7ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT "fk_rails_83ba0472a5"
+FOREIGN KEY ("sold_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (2.0ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT "fk_rails_ec853e7524"
+FOREIGN KEY ("archived_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (0.7ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_purpose CHECK (purpose IN ('sale','rent')) /*application='Vibes'*/[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_listing_status CHECK (listing_status IN ('active','sold','archived')) /*application='Vibes'*/[0m
+  [1m[35m (1.5ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_area_sqm_non_negative CHECK (area_sqm IS NULL OR area_sqm >= 0) /*application='Vibes'*/[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_year_built CHECK (year_built IS NULL OR (year_built >= 1600 AND year_built <= EXTRACT(YEAR FROM NOW())::int + 1)) /*application='Vibes'*/[0m
+  [1m[35m (0.3ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_floor_min CHECK (floor IS NULL OR floor >= -5) /*application='Vibes'*/[0m
+  [1m[35m (0.3ms)[0m  [1m[35mALTER TABLE "properties" ADD CONSTRAINT check_properties_parking_non_negative CHECK (parking_spaces IS NULL OR parking_spaces >= 0) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.1ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260508000032') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (0.6ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+Migrating to CreateFavorites (20260508000033)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (3.7ms)[0m  [1m[35mCREATE TABLE "favorites" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "user_id" uuid NOT NULL, "property_id" uuid NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_favorites_on_user_id_and_property_id" ON "favorites" ("user_id", "property_id") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_favorites_on_property_id" ON "favorites" ("property_id") /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[35mALTER TABLE "favorites" ADD CONSTRAINT "fk_rails_d15744e438"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.8ms)[0m  [1m[35mALTER TABLE "favorites" ADD CONSTRAINT "fk_rails_ac406bc263"
+FOREIGN KEY ("property_id")
+  REFERENCES "properties" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260508000033') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+Migrating to CreatePropertyViewings (20260508000034)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (3.8ms)[0m  [1m[35mCREATE TABLE "property_viewings" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "property_id" uuid NOT NULL, "user_id" uuid NOT NULL, "status" character varying DEFAULT 'requested' NOT NULL, "requested_for" timestamp(6), "message" text, "contact_phone" character varying, "contact_email" character varying, "handled_by_id" uuid, "handled_at" timestamp(6), "admin_notes" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL) /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_property_viewings_on_property_id" ON "property_viewings" ("property_id") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_property_viewings_on_user_id" ON "property_viewings" ("user_id") /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE INDEX "index_property_viewings_on_status" ON "property_viewings" ("status") /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE INDEX "index_property_viewings_on_requested_for" ON "property_viewings" ("requested_for") /*application='Vibes'*/[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE INDEX "index_property_viewings_on_handled_by_id" ON "property_viewings" ("handled_by_id") /*application='Vibes'*/[0m
+  [1m[35m (2.5ms)[0m  [1m[35mALTER TABLE "property_viewings" ADD CONSTRAINT "fk_rails_01b3be1261"
+FOREIGN KEY ("property_id")
+  REFERENCES "properties" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[35mALTER TABLE "property_viewings" ADD CONSTRAINT "fk_rails_c3f2a95cff"
+FOREIGN KEY ("user_id")
+  REFERENCES "users" ("id")
+ ON DELETE CASCADE /*application='Vibes'*/[0m
+  [1m[35m (1.7ms)[0m  [1m[35mALTER TABLE "property_viewings" ADD CONSTRAINT "fk_rails_f1d0bb2e8e"
+FOREIGN KEY ("handled_by_id")
+  REFERENCES "users" ("id")
+ ON DELETE SET NULL /*application='Vibes'*/[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "property_viewings" ADD CONSTRAINT check_property_viewings_status CHECK (status IN ('requested','confirmed','cancelled','completed')) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260508000034') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (1.5ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m

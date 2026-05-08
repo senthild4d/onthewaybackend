@@ -310,8 +310,8 @@ module Api
           return
         end
 
-        unless role.to_s.in?(User.roles.keys)
-          api_error(message: "Invalid role. Allowed roles: #{User.roles.keys.join(', ')}", status: :bad_request)
+        unless role.to_s.in?(%w[user owner])
+          api_error(message: "Invalid role. Allowed roles: user, owner", status: :bad_request)
           return
         end
 
@@ -1045,7 +1045,7 @@ module Api
           email: user.email,
           phone: user.phone,
           name: user.name,
-          role: user.venue_pr_partnerships&.active&.last&.role || user.role,
+          role: user.role,
           status: user.status,
           preferences: user.preferences,
           created_at: user.created_at

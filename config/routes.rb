@@ -5,14 +5,9 @@ Rails.application.routes.draw do
   # API routes
   namespace :api do
     namespace :v1 do
-      get 'currencies', to: 'currencies#index'
-
       # Legal / policy documents (public URLs for in-app display)
       get 'legal_documents', to: 'legal_documents#index'
       get 'legal_documents/:kind', to: 'legal_documents#show'
-      resources :allergens, only: [:index, :create, :destroy]
-      # Search routes
-      get 'search', to: 'search#index'
 
       # Support team moderation (country-level)
       scope :support do
@@ -45,19 +40,6 @@ Rails.application.routes.draw do
       post 'users/me/deactivate', to: 'users#deactivate'
       post 'users/me/reactivate', to: 'users#reactivate'
       
-      # Notifications
-      resources :notifications, only: [:index, :show, :destroy] do
-        member do
-          post 'read', to: 'notifications#mark_read'
-          post 'unread', to: 'notifications#mark_unread'
-        end
-        collection do
-          get 'unread_count', to: 'notifications#unread_count'
-          post 'mark_all_read', to: 'notifications#mark_all_read'
-          delete 'clear_all', to: 'notifications#clear_all'
-        end
-      end
-      
       # OTP Authentication routes
       post 'auth/send_otp', to: 'auth#send_otp'
       post 'auth/verify_otp', to: 'auth#verify_otp'
@@ -88,9 +70,7 @@ Rails.application.routes.draw do
       post 'location/manual', to: 'locations#manual'
       post 'location/reset', to: 'locations#reset'
 
-      resources :categories_groups, only: [:index]
-
-      # Map view - venues and events
+      # Map view - properties only
       get 'maps', to: 'maps#index'
       get 'maps/filter_options', to: 'maps#filter_options'
 
@@ -100,73 +80,40 @@ Rails.application.routes.draw do
           post 'submit', to: 'properties#submit'
           post 'approve', to: 'properties#approve'
           post 'reject', to: 'properties#reject'
+          post 'mark_sold', to: 'properties#mark_sold'
+          post 'archive', to: 'properties#archive'
+          post 'unarchive', to: 'properties#unarchive'
           post 'images', to: 'properties#upload_images'
           delete 'images/:image_id', to: 'properties#remove_image'
           post 'video', to: 'properties#upload_video'
           delete 'video', to: 'properties#remove_video'
         end
       end
-      
-      # Event Reporting (Admin and User)
-      
-      # Wallet and Payment Management
-      resources :wallets, only: [:index, :show] do
-        collection do
-          get 'by_currency/:currency', to: 'wallets#by_currency'
-        end
-      end
-      
-      resources :payment_transactions, only: [:index, :show] do
-        member do
-          post 'refund', to: 'payment_transactions#refund'
-        end
-      end
-      
-      # Payment operations
-      post 'payments/deposit', to: 'payments#deposit'
-      post 'payments/withdraw', to: 'payments#withdraw'
-      post 'payments/pay', to: 'payments#pay'
-      post 'payments/create_intent', to: 'payments#create_intent'
-      post 'payments/confirm_intent', to: 'payments#confirm_intent'
-      get 'payments/intent/:payment_intent_id', to: 'payments#intent_status'
-      
-      # Crypto wallet management
-      resources :crypto_wallets, only: [:index, :show, :create, :update, :destroy]
-      
-      # Payment methods management
-      resources :payment_methods, only: [:index, :show, :create, :update, :destroy] do
-        member do
-          post 'set_default', to: 'payment_methods#set_default'
-        end
-      end
-      
-      # Webhooks (no authentication required)
-      # NOTE: Do not use `namespace :webhooks` here; it would look for Api::V1::Webhooks::* controllers.
-      post 'webhooks/stripe', to: 'webhooks#stripe'
-      post 'webhooks/paypal', to: 'webhooks#paypal'
-      post 'webhooks/crypto', to: 'webhooks#crypto'
+
+      # Favorites
+      get 'favorites', to: 'favorites#index'
+      post 'properties/:property_id/favorite', to: 'favorites#create'
+      delete 'properties/:property_id/favorite', to: 'favorites#destroy'
+
+      # Viewings (appointments)
+      get 'viewings', to: 'property_viewings#index'
+      get 'viewings/my', to: 'property_viewings#my'
+      get 'viewings/:id', to: 'property_viewings#show'
+      patch 'viewings/:id', to: 'property_viewings#update'
+      post 'viewings/:id/cancel', to: 'property_viewings#cancel'
+      get 'properties/:property_id/viewings', to: 'property_viewings#property_viewings'
+      post 'properties/:property_id/viewings', to: 'property_viewings#create'
       
       # Admin endpoints
       namespace :admin do
         get 'legal_documents', to: 'legal_documents#index'
         post 'legal_documents/:kind/upload', to: 'legal_documents#upload'
-
-        resources :payment_providers, only: [:index, :show, :create, :update, :destroy] do
-          member do
-            post 'activate', to: 'payment_providers#activate'
-            post 'deactivate', to: 'payment_providers#deactivate'
-          end
-        end
       end
     end
   end
 
   # ActionCable mount
   mount ActionCable.server => '/cable'
-
-  # WebView routes (outside API namespace - returns HTML, not JSON)
-  get 'webviews/venues/:venue_id/floor_plans/:id', to: 'webviews#floor_plan', as: :floor_plan_webview
-  get 'webviews/venues/:venue_id/floor_plans/:id/select', to: 'webviews#floor_plan_select', as: :floor_plan_select_webview
 
   # Root route
   root to: proc { [200, {}, ['Vibes API - v1.0']] }

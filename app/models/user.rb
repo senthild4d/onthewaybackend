@@ -4,84 +4,26 @@ class User < ApplicationRecord
   # ActiveStorage attachments
   has_one_attached :profile_picture
 
-  # Associations
+  # Associations (kept for real-estate scope)
   has_many :otps, dependent: :destroy
   has_many :devices, dependent: :destroy
-  has_many :artist_categories, dependent: :destroy
-  has_many :categories, through: :artist_categories
-  has_many :venues, foreign_key: 'owner_id', dependent: :restrict_with_error
-  has_many :ratings, dependent: :destroy
-  has_many :bookings, dependent: :destroy
-  has_many :booked_events, through: :bookings, source: :event
-  has_many :food_bar_orders, dependent: :destroy
-  has_many :bill_splits, dependent: :nullify
-  has_many :venue_staff_assignments, class_name: 'VenueStaff', dependent: :destroy
-  has_many :staff_venues, through: :venue_staff_assignments, source: :venue
-  has_many :waiter_calls, dependent: :destroy
-  has_many :venue_blocklists, dependent: :destroy
-  has_many :blocked_from_venues, through: :venue_blocklists, source: :venue
-  has_many :vibe_checks, dependent: :destroy
-  has_many :likes, dependent: :destroy
-  has_many :event_interests, dependent: :destroy
-  has_many :interested_events, through: :event_interests, source: :event
-  has_many :venue_interests, dependent: :destroy
-  has_many :interested_venues, through: :venue_interests, source: :venue
-  has_many :event_reports, foreign_key: 'reporter_id', dependent: :destroy
-  has_many :reviewed_event_reports, foreign_key: 'reviewed_by_id', class_name: 'EventReport', dependent: :nullify
-  has_many :created_group_chats, foreign_key: 'created_by_id', class_name: 'GroupChat', dependent: :destroy
-  has_many :group_chat_memberships, dependent: :destroy
-  has_many :group_chats, through: :group_chat_memberships
-  has_many :group_chat_messages, dependent: :destroy
-  has_many :wallets, dependent: :destroy
-  has_many :payment_transactions, dependent: :destroy
-  has_many :crypto_wallets, dependent: :destroy
-  has_many :payment_methods, dependent: :destroy
-  has_many :chats_as_user1, class_name: 'Chat', foreign_key: 'user1_id', dependent: :destroy
-  has_many :chats_as_user2, class_name: 'Chat', foreign_key: 'user2_id', dependent: :destroy
-  has_many :chat_messages, foreign_key: 'sender_id', dependent: :destroy
+  has_many :favorites, dependent: :destroy
+  has_many :favorite_properties, through: :favorites, source: :property
+  has_many :property_viewings, dependent: :destroy
   has_many :blocked_users, class_name: 'UserBlock', foreign_key: 'blocker_id', dependent: :destroy
   has_many :blocked_by_users, class_name: 'UserBlock', foreign_key: 'blocked_id', dependent: :destroy
   has_many :blocked_user_records, through: :blocked_users, source: :blocked
   has_many :blocked_by_user_records, through: :blocked_by_users, source: :blocker
   has_many :user_reports, foreign_key: 'reporter_id', dependent: :destroy
   has_many :reported_by_users, class_name: 'UserReport', foreign_key: 'reported_id', dependent: :destroy
-  has_many :follows_as_follower, class_name: 'Follow', foreign_key: 'follower_id', dependent: :destroy
-  has_many :follows_as_following, class_name: 'Follow', foreign_key: 'following_id', dependent: :destroy
-  has_many :following, through: :follows_as_follower, source: :following
-  has_many :followers, through: :follows_as_following, source: :follower
-  has_many :follow_requests_sent, class_name: 'FollowRequest', foreign_key: 'requester_id', dependent: :destroy
-  has_many :follow_requests_received, class_name: 'FollowRequest', foreign_key: 'requested_id', dependent: :destroy
-  has_many :venue_follows, dependent: :destroy
-  has_many :followed_venues, through: :venue_follows, source: :venue
-  has_many :venue_pr_partnerships, foreign_key: :user_id, dependent: :destroy
-  has_many :pr_venues, through: :venue_pr_partnerships, source: :venue
-  has_many :active_pr_partnerships, -> { active }, class_name: 'VenuePrPartnership', foreign_key: :user_id
-  has_many :notifications, dependent: :destroy
-  has_many :stream_views, dependent: :destroy
-  has_many :moments, dependent: :destroy
-  has_many :event_posts, dependent: :destroy
   has_many :user_deactivations, dependent: :destroy
 
   # Enums (real-estate app)
-  enum :role, { user: 'user', owner: 'owner', support: 'support', admin: 'admin' }, prefix: true
+  enum :role, { user: 'user', owner: 'owner' }, prefix: true
   enum :status, { active: 'active', disabled: 'disabled' }, prefix: true
 
-  # Backward-compat role helpers (repo was cloned from "vibes" app).
-  # We keep these to avoid breaking existing controllers while we migrate features to properties.
-  def role_consumer?
-    role_user?
-  end
-
-  def role_artist?
-    role_user?
-  end
-
-  def role_brand?
-    role_user?
-  end
-
-  def role_venue_manager?
-    role_owner?
+  def admin?
+    is_admin == true
   end
 
   store_accessor :current_location, :lat, :lng, :formatted_address, :place_id, :source, :recorded_at
@@ -120,17 +62,7 @@ class User < ApplicationRecord
   scope :active, -> { where(status: 'active') }
   scope :users, -> { where(role: 'user') }
   scope :owners, -> { where(role: 'owner') }
-  scope :admins, -> { where(role: 'admin') }
-  scope :support_team, -> { where(role: 'support') }
-
-  # Support team: can moderate content only in assigned countries
-  # support_countries: array of country codes e.g. ['UK', 'US']
-  def support_manages_country?(country_code)
-    return false unless role_support? && country_code.present?
-    countries = support_countries.is_a?(Array) ? support_countries.map { |c| c.to_s.upcase } : []
-    return true if countries.include?('*') || countries.include?('ALL') # Global support
-    countries.include?(country_code.to_s.upcase)
-  end
+  scope :admins, -> { where(is_admin: true) }
 
   def current_location_snapshot
     location_data = current_location.presence || {}

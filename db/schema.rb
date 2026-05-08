@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_08_000034) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -43,70 +43,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
-  create_table "allergens", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "code", null: false
-    t.string "label", null: false
-    t.text "description"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["code"], name: "index_allergens_on_code", unique: true
-    t.index ["label"], name: "index_allergens_on_label"
-  end
-
-  create_table "artist_categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.uuid "category_id", null: false
-    t.string "source", default: "onboarding", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["category_id"], name: "index_artist_categories_on_category_id"
-    t.index ["user_id", "category_id"], name: "index_artist_categories_on_user_id_and_category_id", unique: true
-    t.index ["user_id"], name: "index_artist_categories_on_user_id"
-  end
-
-  create_table "categories", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "categories_group_id", null: false
-    t.string "name", null: false
-    t.string "slug", null: false
-    t.string "icon_key"
-    t.integer "display_order", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["categories_group_id", "name"], name: "index_categories_on_categories_group_id_and_name", unique: true
-    t.index ["display_order"], name: "index_categories_on_display_order"
-    t.index ["slug"], name: "index_categories_on_slug", unique: true
-  end
-
-  create_table "categories_groups", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "name", null: false
-    t.string "slug", null: false
-    t.text "description"
-    t.integer "display_order", default: 0, null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["display_order"], name: "index_categories_groups_on_display_order"
-    t.index ["slug"], name: "index_categories_groups_on_slug", unique: true
-  end
-
-  create_table "crypto_wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.string "crypto_currency", null: false
-    t.string "wallet_address", null: false
-    t.string "wallet_type", default: "external", null: false
-    t.string "network"
-    t.string "status", default: "active", null: false
-    t.text "metadata"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["status"], name: "index_crypto_wallets_on_status"
-    t.index ["user_id", "crypto_currency"], name: "index_crypto_wallets_user_crypto"
-    t.index ["user_id"], name: "index_crypto_wallets_on_user_id"
-    t.index ["wallet_address"], name: "index_crypto_wallets_on_wallet_address"
-    t.check_constraint "crypto_currency::text = ANY (ARRAY['BTC'::character varying::text, 'ETH'::character varying::text, 'USDT'::character varying::text, 'USDC'::character varying::text, 'SOL'::character varying::text, 'MATIC'::character varying::text, 'BNB'::character varying::text])", name: "check_crypto_wallet_currency"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text, 'archived'::character varying::text])", name: "check_crypto_wallet_status"
-    t.check_constraint "wallet_type::text = ANY (ARRAY['external'::character varying::text, 'internal'::character varying::text])", name: "check_crypto_wallet_type"
-  end
-
   create_table "devices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "user_id", null: false
     t.string "device_uuid", null: false
@@ -131,28 +67,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
     t.index ["user_id"], name: "index_devices_on_user_id"
   end
 
+  create_table "favorites", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.uuid "property_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["property_id"], name: "index_favorites_on_property_id"
+    t.index ["user_id", "property_id"], name: "index_favorites_on_user_id_and_property_id", unique: true
+  end
+
   create_table "legal_documents", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "kind", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["kind"], name: "index_legal_documents_on_kind", unique: true
-  end
-
-  create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.string "notification_type", null: false
-    t.string "title", null: false
-    t.text "message", null: false
-    t.jsonb "metadata", default: {}, null: false
-    t.boolean "read", default: false, null: false
-    t.datetime "read_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["created_at"], name: "index_notifications_on_created_at"
-    t.index ["notification_type"], name: "index_notifications_on_notification_type"
-    t.index ["read"], name: "index_notifications_on_read"
-    t.index ["user_id", "read"], name: "index_notifications_on_user_id_and_read"
-    t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
   create_table "otps", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -171,88 +99,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
     t.index ["phone"], name: "index_otps_on_phone"
     t.index ["user_id"], name: "index_otps_on_user_id"
     t.check_constraint "phone IS NOT NULL OR email IS NOT NULL", name: "check_phone_or_email"
-  end
-
-  create_table "payment_methods", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.string "payment_method_type", null: false
-    t.string "provider", null: false
-    t.string "provider_payment_method_id", null: false
-    t.string "card_brand"
-    t.string "card_last4"
-    t.string "card_exp_month"
-    t.string "card_exp_year"
-    t.string "billing_name"
-    t.string "billing_email"
-    t.string "billing_phone"
-    t.jsonb "billing_address", default: {}
-    t.jsonb "metadata", default: {}
-    t.boolean "is_default", default: false, null: false
-    t.string "status", default: "active", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["is_default"], name: "index_payment_methods_on_is_default"
-    t.index ["payment_method_type"], name: "index_payment_methods_on_payment_method_type"
-    t.index ["provider"], name: "index_payment_methods_on_provider"
-    t.index ["status"], name: "index_payment_methods_on_status"
-    t.index ["user_id", "provider", "provider_payment_method_id"], name: "index_payment_methods_user_provider_unique", unique: true
-    t.index ["user_id"], name: "index_payment_methods_on_user_id"
-    t.check_constraint "payment_method_type::text = ANY (ARRAY['credit_card'::character varying::text, 'debit_card'::character varying::text, 'bank_account'::character varying::text, 'crypto_wallet'::character varying::text, 'paypal'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text])", name: "check_payment_method_type"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text, 'expired'::character varying::text])", name: "check_payment_method_status"
-  end
-
-  create_table "payment_providers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.string "name", null: false
-    t.string "provider_type", null: false
-    t.string "status", default: "active", null: false
-    t.jsonb "credentials", default: {}, null: false
-    t.jsonb "settings", default: {}, null: false
-    t.boolean "is_default", default: false, null: false
-    t.text "description"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["is_default"], name: "index_payment_providers_on_is_default"
-    t.index ["name"], name: "index_payment_providers_on_name", unique: true
-    t.index ["provider_type"], name: "index_payment_providers_on_provider_type"
-    t.index ["status"], name: "index_payment_providers_on_status"
-    t.check_constraint "provider_type::text = ANY (ARRAY['stripe'::character varying::text, 'paypal'::character varying::text, 'crypto'::character varying::text, 'bank'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text, 'other'::character varying::text])", name: "check_payment_provider_type"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text, 'maintenance'::character varying::text])", name: "check_payment_provider_status"
-  end
-
-  create_table "payment_transactions", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "wallet_id", null: false
-    t.uuid "user_id", null: false
-    t.string "transaction_type", null: false
-    t.string "status", default: "pending", null: false
-    t.decimal "amount", precision: 20, scale: 8, null: false
-    t.string "currency", default: "USD", null: false
-    t.string "payment_method", null: false
-    t.string "payment_provider"
-    t.string "provider_transaction_id"
-    t.text "provider_response"
-    t.string "reference_type"
-    t.uuid "reference_id"
-    t.text "description"
-    t.text "metadata"
-    t.decimal "fee", precision: 20, scale: 8, default: "0.0", null: false
-    t.decimal "net_amount", precision: 20, scale: 8, null: false
-    t.datetime "processed_at"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["created_at"], name: "index_payment_transactions_on_created_at"
-    t.index ["payment_method"], name: "index_payment_transactions_on_payment_method"
-    t.index ["payment_provider"], name: "index_payment_transactions_on_payment_provider"
-    t.index ["provider_transaction_id"], name: "index_payment_transactions_on_provider_transaction_id"
-    t.index ["reference_type", "reference_id"], name: "index_payment_transactions_on_reference_type_and_reference_id"
-    t.index ["status"], name: "index_payment_transactions_on_status"
-    t.index ["transaction_type"], name: "index_payment_transactions_on_transaction_type"
-    t.index ["user_id"], name: "index_payment_transactions_on_user_id"
-    t.index ["wallet_id"], name: "index_payment_transactions_on_wallet_id"
-    t.check_constraint "amount > 0::numeric", name: "check_payment_transaction_amount_positive"
-    t.check_constraint "fee >= 0::numeric", name: "check_payment_transaction_fee_non_negative"
-    t.check_constraint "payment_method::text = ANY (ARRAY['credit_card'::character varying::text, 'debit_card'::character varying::text, 'bank_transfer'::character varying::text, 'crypto'::character varying::text, 'paypal'::character varying::text, 'apple_pay'::character varying::text, 'google_pay'::character varying::text, 'other'::character varying::text])", name: "check_payment_transaction_method"
-    t.check_constraint "status::text = ANY (ARRAY['pending'::character varying::text, 'processing'::character varying::text, 'completed'::character varying::text, 'failed'::character varying::text, 'cancelled'::character varying::text, 'refunded'::character varying::text])", name: "check_payment_transaction_status"
-    t.check_constraint "transaction_type::text = ANY (ARRAY['deposit'::character varying::text, 'withdrawal'::character varying::text, 'payment'::character varying::text, 'refund'::character varying::text, 'transfer'::character varying::text])", name: "check_payment_transaction_type"
   end
 
   create_table "properties", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -282,13 +128,64 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
     t.text "rejection_reason"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "purpose", default: "sale", null: false
+    t.string "listing_status", default: "active", null: false
+    t.datetime "sold_at"
+    t.uuid "sold_by_id"
+    t.datetime "archived_at"
+    t.uuid "archived_by_id"
+    t.decimal "area_sqm", precision: 12, scale: 2
+    t.integer "year_built"
+    t.integer "floor"
+    t.integer "total_floors"
+    t.boolean "furnished"
+    t.integer "parking_spaces"
+    t.jsonb "features", default: {}, null: false
     t.index ["approval_status"], name: "index_properties_on_approval_status"
+    t.index ["archived_at"], name: "index_properties_on_archived_at"
+    t.index ["archived_by_id"], name: "index_properties_on_archived_by_id"
+    t.index ["area_sqm"], name: "index_properties_on_area_sqm"
+    t.index ["bathrooms"], name: "index_properties_on_bathrooms"
+    t.index ["bedrooms"], name: "index_properties_on_bedrooms"
     t.index ["latitude", "longitude"], name: "index_properties_on_latitude_and_longitude"
+    t.index ["listing_status"], name: "index_properties_on_listing_status"
     t.index ["owner_id"], name: "index_properties_on_owner_id"
-    t.check_constraint "approval_status::text = ANY (ARRAY['draft'::character varying, 'pending_review'::character varying, 'approved'::character varying, 'rejected'::character varying, 'archived'::character varying]::text[])", name: "check_properties_approval_status"
+    t.index ["price"], name: "index_properties_on_price"
+    t.index ["property_type"], name: "index_properties_on_property_type"
+    t.index ["purpose"], name: "index_properties_on_purpose"
+    t.index ["sold_at"], name: "index_properties_on_sold_at"
+    t.index ["sold_by_id"], name: "index_properties_on_sold_by_id"
+    t.check_constraint "approval_status::text = ANY (ARRAY['draft'::character varying::text, 'pending_review'::character varying::text, 'approved'::character varying::text, 'rejected'::character varying::text, 'archived'::character varying::text])", name: "check_properties_approval_status"
+    t.check_constraint "area_sqm IS NULL OR area_sqm >= 0::numeric", name: "check_properties_area_sqm_non_negative"
+    t.check_constraint "floor IS NULL OR floor >= '-5'::integer", name: "check_properties_floor_min"
     t.check_constraint "latitude IS NULL OR latitude >= '-90'::integer::numeric AND latitude <= 90::numeric", name: "check_properties_latitude"
+    t.check_constraint "listing_status::text = ANY (ARRAY['active'::character varying, 'sold'::character varying, 'archived'::character varying]::text[])", name: "check_properties_listing_status"
     t.check_constraint "longitude IS NULL OR longitude >= '-180'::integer::numeric AND longitude <= 180::numeric", name: "check_properties_longitude"
+    t.check_constraint "parking_spaces IS NULL OR parking_spaces >= 0", name: "check_properties_parking_non_negative"
     t.check_constraint "price IS NULL OR price >= 0::numeric", name: "check_properties_price_non_negative"
+    t.check_constraint "purpose::text = ANY (ARRAY['sale'::character varying, 'rent'::character varying]::text[])", name: "check_properties_purpose"
+    t.check_constraint "year_built IS NULL OR year_built >= 1600 AND year_built <= (EXTRACT(year FROM now())::integer + 1)", name: "check_properties_year_built"
+  end
+
+  create_table "property_viewings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "property_id", null: false
+    t.uuid "user_id", null: false
+    t.string "status", default: "requested", null: false
+    t.datetime "requested_for"
+    t.text "message"
+    t.string "contact_phone"
+    t.string "contact_email"
+    t.uuid "handled_by_id"
+    t.datetime "handled_at"
+    t.text "admin_notes"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["handled_by_id"], name: "index_property_viewings_on_handled_by_id"
+    t.index ["property_id"], name: "index_property_viewings_on_property_id"
+    t.index ["requested_for"], name: "index_property_viewings_on_requested_for"
+    t.index ["status"], name: "index_property_viewings_on_status"
+    t.index ["user_id"], name: "index_property_viewings_on_user_id"
+    t.check_constraint "status::text = ANY (ARRAY['requested'::character varying, 'confirmed'::character varying, 'cancelled'::character varying, 'completed'::character varying]::text[])", name: "check_property_viewings_status"
   end
 
   create_table "split_qr_codes", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -387,54 +284,38 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000010) do
     t.string "profile_picture_url"
     t.text "bio"
     t.jsonb "support_countries", default: [], null: false, comment: "Country codes (e.g. UK, US) this support user can moderate"
+    t.boolean "is_admin", default: false, null: false
     t.index ["created_at"], name: "index_users_on_created_at"
     t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["is_admin"], name: "index_users_on_is_admin"
     t.index ["phone"], name: "index_users_on_phone", unique: true, where: "(phone IS NOT NULL)"
     t.index ["role"], name: "index_users_on_role"
     t.index ["status"], name: "index_users_on_status"
     t.index ["username"], name: "index_users_on_username", unique: true, where: "(username IS NOT NULL)"
     t.check_constraint "email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'::text", name: "check_email_format"
     t.check_constraint "phone IS NOT NULL OR email IS NOT NULL", name: "check_user_phone_or_email"
-    t.check_constraint "role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying, 'support'::character varying, 'admin'::character varying]::text[])", name: "check_role"
+    t.check_constraint "role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying]::text[])", name: "check_role"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'disabled'::character varying::text])", name: "check_status"
-  end
-
-  create_table "wallets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
-    t.uuid "user_id", null: false
-    t.string "currency", default: "USD", null: false
-    t.decimal "balance", precision: 20, scale: 8, default: "0.0", null: false
-    t.decimal "locked_balance", precision: 20, scale: 8, default: "0.0", null: false
-    t.string "status", default: "active", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["status"], name: "index_wallets_on_status"
-    t.index ["user_id", "currency"], name: "index_wallets_user_currency_unique", unique: true
-    t.index ["user_id"], name: "index_wallets_on_user_id"
-    t.check_constraint "balance >= 0::numeric", name: "check_wallet_balance_non_negative"
-    t.check_constraint "locked_balance >= 0::numeric", name: "check_wallet_locked_balance_non_negative"
-    t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'suspended'::character varying::text, 'closed'::character varying::text])", name: "check_wallet_status"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "artist_categories", "categories", on_delete: :cascade
-  add_foreign_key "artist_categories", "users", on_delete: :cascade
-  add_foreign_key "categories", "categories_groups", on_delete: :cascade
-  add_foreign_key "crypto_wallets", "users", on_delete: :cascade
   add_foreign_key "devices", "users"
-  add_foreign_key "notifications", "users", on_delete: :cascade
+  add_foreign_key "favorites", "properties", on_delete: :cascade
+  add_foreign_key "favorites", "users", on_delete: :cascade
   add_foreign_key "otps", "users"
-  add_foreign_key "payment_methods", "users", on_delete: :cascade
-  add_foreign_key "payment_transactions", "users", on_delete: :restrict
-  add_foreign_key "payment_transactions", "wallets", on_delete: :restrict
   add_foreign_key "properties", "users", column: "approved_by_id", on_delete: :nullify
+  add_foreign_key "properties", "users", column: "archived_by_id", on_delete: :nullify
   add_foreign_key "properties", "users", column: "owner_id"
   add_foreign_key "properties", "users", column: "rejected_by_id", on_delete: :nullify
+  add_foreign_key "properties", "users", column: "sold_by_id", on_delete: :nullify
+  add_foreign_key "property_viewings", "properties", on_delete: :cascade
+  add_foreign_key "property_viewings", "users", column: "handled_by_id", on_delete: :nullify
+  add_foreign_key "property_viewings", "users", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocked_id", on_delete: :cascade
   add_foreign_key "user_blocks", "users", column: "blocker_id", on_delete: :cascade
   add_foreign_key "user_deactivations", "users", on_delete: :cascade
   add_foreign_key "user_reports", "users", column: "reported_id", on_delete: :cascade
   add_foreign_key "user_reports", "users", column: "reporter_id", on_delete: :cascade
   add_foreign_key "user_reports", "users", column: "reviewed_by_id", on_delete: :nullify
-  add_foreign_key "wallets", "users", on_delete: :cascade
 end
