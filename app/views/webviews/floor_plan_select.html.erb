@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= @floor_plan.name %> - Select Table</title>
+  <script src="https://cdn.jsdelivr.net/npm/konva@9.2.0/konva.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+      overflow: hidden;
+      touch-action: none;
+    }
+    #container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    #floor-plan-container {
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+      background: #ffffff;
+      overflow: visible;
+      min-width: 300px;
+      min-height: 300px;
+    }
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #374151;
+      font-size: 16px;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .loading-spinner {
+      width: 34px;
+      height: 34px;
+      border: 3px solid rgba(55, 65, 81, 0.2);
+      border-top-color: #374151;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .panel {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #111827;
+      color: #ffffff;
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .panel .badge {
+      background: #4f46e5;
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+    }
+    .panel button {
+      border: none;
+      background: #16a34a;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .panel button[disabled] {
+      background: #6b7280;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <div>Loading floor plan...</div>
+    </div>
+    <div id="floor-plan-container" style="display: none;"></div>
+  </div>
+
+  <div class="panel" id="selection-panel">
+    <div>Selected table:</div>
+    <div class="badge" id="selected-table">None</div>
+    <button id="confirm-button" disabled>Confirm</button>
+  </div>
+
+  <script>
+    (async function() {
+      const canvasData = <%= @canvas_data.to_json.html_safe %>;
+      const venueData = <%= @venue_data.to_json.html_safe %>;
+      const bookingId = "<%= @booking_id.to_s %>" ||
+        new URLSearchParams(window.location.search).get('booking') ||
+        new URLSearchParams(window.location.search).get('booking_id') || '';
+      const eventId = "<%= @event_id.to_s %>";
+      const autoAssign = <%= @auto_assign ? 'true' : 'false' %>;
+      const rawAuthToken = new URLSearchParams(window.location.search).get('auth_token') ||
+        new URLSearchParams(window.location.search).get('token') ||
+        window.localStorage.getItem('auth_token') ||
+        window.localStorage.getItem('token') ||
+        "<%= @auth_token.to_s %>";
+
+      function resolveAuthToken() {
+        const candidate = (rawAuthToken || '').toString().trim();
+        if (!candidate) return '';
+        const normalized = candidate.toLowerCase().startsWith('bearer ')
+          ? candidate
+          : `Bearer ${candidate}`;
+        try {
+          window.localStorage.setItem('auth_token', normalized);
+        } catch (e) {
+          // ignore storage errors
+        }
+        return normalized;
+      }
+
+      let stage, layer, backgroundLayer;
+      let selectedTable = null;
+      let isSubmitting = false;
+      let lockedSelection = false;
+      const bookedTableNumbers = new Set();
+      const tableNodes = new Map();
+      const shouldAutoAssign = autoAssign || !!bookingId;
+
+      function initStage() {
+        const container = document.getElementById('container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        const stageWidth = canvasData.width || 1000;
+        const stageHeight = canvasData.height || 1000;
+        const scaleX = containerWidth * 0.9 / stageWidth;
+        const scaleY = containerHeight * 0.9 / stageHeight;
+        const scale = Math.min(scaleX, scaleY, 1);
+
+        stage = new Konva.Stage({
+          container: 'floor-plan-container',
+          width: stageWidth * scale,
+          height: stageHeight * scale
+        });
+        stage.scale({ x: scale, y: scale });
+
+        backgroundLayer = new Konva.Layer();
+        layer = new Konva.Layer();
+        stage.add(backgroundLayer);
+        stage.add(layer);
+
+        drawBackgroundGrid(stageWidth, stageHeight);
+      }
+
+      function drawBackgroundGrid(stageWidth, stageHeight) {
+        const gridSize = 50;
+        const gridColor = 'rgba(148, 163, 184, 0.35)';
+        const majorGridColor = 'rgba(148, 163, 184, 0.6)';
+        const floorBg = new Konva.Rect({
+          x: 0, y: 0, width: stageWidth, height: stageHeight,
+          fill: '#f8fafc', listening: false
+        });
+        backgroundLayer.add(floorBg);
+        for (let x = 0; x <= stageWidth; x += gridSize) {
+          const isMajor = x % (gridSize * 5) === 0;
+          backgroundLayer.add(new Konva.Line({
+            points: [x, 0, x, stageHeight],
+            stroke: isMajor ? majorGridColor : gridColor,
+            strokeWidth: isMajor ? 1 : 0.5,
+            listening: false
+          }));
+        }
+        for (let y = 0; y <= stageHeight; y += gridSize) {
+          const isMajor = y % (gridSize * 5) === 0;
+          backgroundLayer.add(new Konva.Line({
+            points: [0, y, stageWidth, y],
+            stroke: isMajor ? majorGridColor : gridColor,
+            strokeWidth: isMajor ? 1 : 0.5,
+            listening: false
+          }));
+        }
+        backgroundLayer.draw();
+      }
+
+      function renderTables() {
+        if (!canvasData.tables || canvasData.tables.length === 0) return;
+        canvasData.tables.forEach(table => {
+          if (!table.is_active) return;
+          const x = table.position.x;
+          const y = table.position.y;
+          const width = table.dimensions.width;
+          const height = table.dimensions.height;
+          const baseColor = table.color || '#9ca3af';
+          const strokeColor = '#4b5563';
+
+          const group = new Konva.Group({
+            x, y, selectable: true, tableId: table.id, tableNumber: table.table_number
+          });
+          const isBooked = bookedTableNumbers.has(table.table_number);
+
+          let tableShape;
+          if (table.shape === 'circle') {
+            tableShape = new Konva.Circle({
+              x: 0, y: 0, radius: width / 2,
+              fill: baseColor, stroke: strokeColor, strokeWidth: 2, name: 'shape'
+            });
+          } else if (table.shape === 'oval') {
+            tableShape = new Konva.Ellipse({
+              x: 0, y: 0, radiusX: width / 2, radiusY: height / 2,
+              fill: baseColor, stroke: strokeColor, strokeWidth: 2, name: 'shape'
+            });
+          } else {
+            tableShape = new Konva.Rect({
+              x: -width / 2, y: -height / 2, width, height,
+              fill: baseColor, stroke: strokeColor, strokeWidth: 2, name: 'shape',
+              cornerRadius: table.shape === 'square' ? 10 : 4
+            });
+          }
+
+          const label = new Konva.Text({
+            x: -width / 2,
+            y: -8,
+            width: width,
+            text: table.table_number || '',
+            fontSize: 12,
+            fill: '#111827',
+            align: 'center'
+          });
+
+          group.add(tableShape);
+          group.add(label);
+          layer.add(group);
+          tableNodes.set(table.table_number, { group, shape: tableShape, label });
+
+          group.on('mouseenter', () => {
+            if (isBooked || lockedSelection) return;
+            document.body.style.cursor = 'pointer';
+            tableShape.opacity(0.9);
+            layer.draw();
+          });
+          group.on('mouseleave', () => {
+            document.body.style.cursor = 'default';
+            if (!isBooked && !lockedSelection) tableShape.opacity(1);
+            layer.draw();
+          });
+          group.on('click tap', () => {
+            if (isBooked || lockedSelection) return;
+            selectTable(table, group, tableShape);
+          });
+
+          if (table.seats && table.seats.length > 0) {
+            table.seats.forEach(seat => {
+              if (!seat.is_active) return;
+              layer.add(new Konva.Circle({
+                x: seat.position.x,
+                y: seat.position.y,
+                radius: 4,
+                fill: seat.is_accessible ? '#f59e0b' : '#0ea5e9',
+                stroke: '#1f2937',
+                strokeWidth: 1,
+                listening: false
+              }));
+            });
+          }
+        });
+      }
+
+      function selectTable(table, group, tableShape) {
+        if (lockedSelection) return;
+        if (isSubmitting) return;
+        if (selectedTable && selectedTable.shape) {
+          selectedTable.shape.stroke('#4b5563');
+          selectedTable.shape.strokeWidth(2);
+        }
+        selectedTable = { table, group, shape: tableShape };
+        tableShape.stroke('#22c55e');
+        tableShape.strokeWidth(3);
+        layer.draw();
+        updateSelectionPanel(table);
+        if (shouldAutoAssign) {
+          submitSelection();
+        }
+      }
+
+      function updateSelectionPanel(table) {
+        const badge = document.getElementById('selected-table');
+        const button = document.getElementById('confirm-button');
+        badge.textContent = table ? table.table_number : 'None';
+        button.disabled = !table || isSubmitting;
+        if (shouldAutoAssign) {
+          button.style.display = 'none';
+        }
+      }
+
+      async function loadBookedTables() {
+        const authHeader = resolveAuthToken();
+        if (!eventId || !authHeader) return;
+        const query = bookingId ? `?booking_id=${encodeURIComponent(bookingId)}` : '';
+        const response = await fetch(`${window.location.origin}/api/v1/events/${eventId}/bookings/occupied_tables${query}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          }
+        });
+        if (!response.ok) return;
+        const json = await response.json();
+        const tableNumbers = json?.data?.table_numbers || [];
+        tableNumbers.forEach(number => bookedTableNumbers.add(number));
+      }
+
+      async function assignTableViaApi(tableNumber) {
+        if (!bookingId) return { ok: false, message: 'Missing booking_id' };
+        const authHeader = resolveAuthToken();
+        if (!authHeader) return { ok: false, message: 'Missing auth token' };
+        const tokenParam = encodeURIComponent(rawAuthToken || '');
+        const response = await fetch(`${window.location.origin}/api/v1/bookings/${bookingId}/assign_table?auth_token=${tokenParam}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': authHeader
+          },
+          body: JSON.stringify({ table_number: tableNumber })
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          if (response.status === 401) {
+            return { ok: false, message: 'Unauthorized: token expired or invalid' };
+          }
+          return { ok: false, message: text };
+        }
+        return { ok: true };
+      }
+
+      async function submitSelection() {
+        if (!selectedTable) return;
+        if (isSubmitting) return;
+        isSubmitting = true;
+        updateSelectionPanel(selectedTable.table);
+        const payload = {
+          type: 'table_selected',
+          table_id: selectedTable.table.id,
+          table_number: selectedTable.table.table_number,
+          booking_id: bookingId
+        };
+
+        if (shouldAutoAssign) {
+          const result = await assignTableViaApi(selectedTable.table.table_number);
+          payload.auto_assign = result.ok;
+          payload.error = result.ok ? null : result.message;
+          if (!result.ok) {
+            alert(result.message || 'Failed to assign table');
+          }
+        }
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+        }
+        if (payload.auto_assign) {
+          lockedSelection = true;
+          bookedTableNumbers.add(selectedTable.table.table_number);
+        }
+        isSubmitting = false;
+        updateSelectionPanel(selectedTable.table);
+      }
+
+      document.getElementById('confirm-button').addEventListener('click', submitSelection);
+
+      try {
+        initStage();
+        await loadBookedTables();
+        renderTables();
+
+        bookedTableNumbers.forEach(tableNumber => {
+          const node = tableNodes.get(tableNumber);
+          if (!node) return;
+          node.shape.fill('#cbd5f5');
+          node.shape.stroke('#94a3b8');
+          node.shape.opacity(0.6);
+        });
+
+        backgroundLayer.draw();
+        layer.draw();
+
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('floor-plan-container').style.display = 'block';
+        updateSelectionPanel(null);
+
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'floor_plan_loaded',
+            floor_plan_id: canvasData.id,
+            venue_name: venueData.name,
+            status: 'ready'
+          }));
+        }
+      } catch (error) {
+        document.getElementById('loading').innerHTML =
+          '<div>Error loading floor plan: ' + error.message + '</div>';
+      }
+    })();
+  </script>
+</body>
+</html>

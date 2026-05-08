@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Redirect…</title>
+  <script>
+    // Legacy path: use /venue_360_viewer.html for venue 360° (not stories).
+    var q = window.location.search || '';
+    var h = window.location.hash || '';
+    window.location.replace('venue_360_viewer.html' + q + h);
+  </script>
+</head>
+<body>
+  <p><a href="venue_360_viewer.html">Continue to venue 360° viewer</a></p>
+</body>
+</html>

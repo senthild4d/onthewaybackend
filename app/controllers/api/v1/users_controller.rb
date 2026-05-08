@@ -1,0 +1,882 @@
+module Api
+  module V1
+    class UsersController < ApplicationController
+      before_action :require_authentication!, except: [:share_qr]
+      before_action :set_user, only: [:show]
+      before_action :set_user_for_qr, only: [:share_qr]
+
+      PUSH_NOTIFICATION_SETTINGS_DEFAULTS = {
+        'interactions' => {
+          'like' => true,
+          'comments' => true,
+          'new_followers' => true,
+          'mentions_and_tags' => true
+        },
+        'rsvp_and_booking' => {
+          'reminder_24h' => true,
+          'reminder_1h' => true,
+          'booking_cancellation_confirmation' => true,
+          'event_cancellation_notification' => true,
+          'event_details_update' => true,
+          'vibecheck_feedback' => true
+        },
+        'new_post_events' => {
+          'venue_new_events' => true,
+          'venue_new_reels' => true,
+          'artist_new_songs' => true,
+          'artist_new_events' => true
+        },
+        'chat' => {
+          'direct_messages' => true
+        }
+      }.freeze
+      
+      # GET /api/v1/users/:id
+      def show
+        api_success(
+          data: { user: user_profile_response(@user) },
+          status: :ok
+        )
+      end
+      
+      # GET /api/v1/users/me
+      # For venue_manager/brand: includes last 1 year's moments, event images, and events with poster
+      # For regular users: includes user uploaded moments
+      def me
+        data = { user: user_response(current_user) }
+        data[:moment] = me_moments(current_user)
+        data[:events] = me_events_with_poster(current_user) if current_user.role_venue_manager? || current_user.role_brand?
+        api_success(data: data, status: :ok)
+      end
+      
+      # PATCH /api/v1/users/me
+      def update
+        # Only allow updating name, username, date_of_birth, profile_picture_url directly
+        # Email and phone require separate OTP verification endpoints
+        update_params = user_params.except(:email, :phone)
+        
+        if current_user.update(update_params)
+          api_success(
+            data: { user: user_response(current_user) },
+            message: 'Profile updated successfully',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: current_user.errors.full_messages)
+        end
+      end
+
+      # GET /api/v1/users/me/push_notification_settings
+      def push_notification_settings
+        settings = merged_push_notification_settings(current_user)
+        api_success(data: { push_notification_settings: settings }, status: :ok)
+      end
+
+      # PATCH /api/v1/users/me/push_notification_settings
+      #
+      # Body:
+      # {
+      #   "push_notification_settings": {
+      #     "interactions": { "like": false }
+      #   }
+      # }
+      def update_push_notification_settings
+        incoming = extract_push_notification_settings_param
+        unless incoming
+          api_error(message: 'push_notification_settings is required', status: :bad_request)
+          return
+        end
+
+        sanitized = sanitize_push_notification_settings(incoming)
+        if sanitized[:error]
+          api_error(message: sanitized[:error], status: :bad_request)
+          return
+        end
+
+        prefs = (current_user.preferences.presence || {}).deep_dup
+        existing = prefs['push_notification_settings'].is_a?(Hash) ? prefs['push_notification_settings'] : {}
+        updated = existing.deep_merge(sanitized[:settings])
+        prefs['push_notification_settings'] = updated
+
+        if current_user.update(preferences: prefs)
+          api_success(
+            data: { push_notification_settings: merged_push_notification_settings(current_user) },
+            message: 'Push notification settings updated',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: current_user.errors.full_messages)
+        end
+      end
+      
+      # POST /api/v1/users/me/upload_profile_picture
+      def upload_profile_picture
+        profile_picture = params[:profile_picture] || params[:image] || params[:file]
+        
+        if profile_picture.blank?
+          api_error(message: 'Profile picture file is required', status: :bad_request)
+          return
+        end
+        
+        # Validate file type
+        unless profile_picture.content_type.in?(%w[image/jpeg image/jpg image/png image/gif image/webp])
+          api_error(message: 'Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed', status: :bad_request)
+          return
+        end
+        
+        # Validate file size (max 5MB)
+        if profile_picture.size > 5.megabytes
+          api_error(message: 'File size too large. Maximum size is 5MB', status: :bad_request)
+          return
+        end
+        
+        # Attach the file
+        current_user.profile_picture.attach(profile_picture)
+        
+        if current_user.profile_picture.attached?
+          # Generate URL
+          picture_url = current_user.avatar_url
+          
+          api_success(
+            data: { 
+              user: user_response(current_user),
+              profile_picture_url: picture_url,
+              avatar_url: picture_url
+            },
+            message: 'Profile picture uploaded successfully',
+            status: :ok
+          )
+        else
+          api_error(message: 'Failed to upload profile picture', status: :unprocessable_entity)
+        end
+      end
+      
+      # POST /api/v1/users/me/change_email
+      def change_email
+        new_email = params[:email]&.downcase&.strip
+        
+        if new_email.blank? || !new_email.match?(URI::MailTo::EMAIL_REGEXP)
+          api_error(message: 'Invalid email address', status: :bad_request)
+          return
+        end
+        
+        # Check if email is already taken
+        if User.exists?(email: new_email) && User.find_by(email: new_email).id != current_user.id
+          api_error(message: 'Email is already taken', status: :bad_request)
+          return
+        end
+        
+        # Check if same as current email
+        if new_email == current_user.email
+          api_error(message: 'New email must be different from current email', status: :bad_request)
+          return
+        end
+        
+        # Send OTP to new email
+        otp = Otp.create_for_email(new_email)
+        if otp.persisted?
+          # Create verification token with user_id, pending_email, and otp_id
+          token = JsonWebToken.encode(
+            user_id: current_user.id,
+            pending_email: new_email,
+            otp_id: otp.id,
+            exp: 15.minutes.from_now.to_i
+          )
+          
+          # Send OTP via email
+          EmailService.send_otp(new_email, otp.code) rescue nil
+          
+          api_success(
+            data: {
+              verification_token: token,
+              email: new_email,
+              otp: otp.code, # TODO: Remove this from the response later (for testing only)
+              expires_in: "#{Otp::OTP_EXPIRY_MINUTES} minutes",
+              message: 'OTP sent to new email. Use verify_email_change endpoint to complete.'
+            },
+            message: 'OTP sent to new email address',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: otp.errors.full_messages)
+        end
+      end
+      
+      # POST /api/v1/users/me/change_phone
+      def change_phone
+        new_phone = normalize_phone(params[:phone])
+        
+        if new_phone.blank? || new_phone.length < 10
+          api_error(message: 'Invalid phone number', status: :bad_request)
+          return
+        end
+        
+        # Check if phone is already taken
+        if User.exists?(phone: new_phone) && User.find_by(phone: new_phone).id != current_user.id
+          api_error(message: 'Phone number is already taken', status: :bad_request)
+          return
+        end
+        
+        # Check if same as current phone
+        if new_phone == current_user.phone
+          api_error(message: 'New phone must be different from current phone', status: :bad_request)
+          return
+        end
+        
+        # Send OTP to new phone
+        otp = Otp.create_for_phone(new_phone)
+        if otp.persisted?
+          # Create verification token with user_id, pending_phone, and otp_id
+          token = JsonWebToken.encode(
+            user_id: current_user.id,
+            pending_phone: new_phone,
+            otp_id: otp.id,
+            exp: 15.minutes.from_now.to_i
+          )
+          
+          # Send OTP via SMS
+          SmsService.send_otp(new_phone, otp.code) rescue nil
+          
+          api_success(
+            data: {
+              verification_token: token,
+              phone: new_phone,
+              otp: otp.code, # TODO: Remove this from the response later (for testing only)
+              expires_in: "#{Otp::OTP_EXPIRY_MINUTES} minutes",
+              message: 'OTP sent to new phone. Use verify_phone_change endpoint to complete.'
+            },
+            message: 'OTP sent to new phone number',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: otp.errors.full_messages)
+        end
+      end
+      
+      # POST /api/v1/users/me/deactivate
+      def deactivate
+        reason = params[:reason]
+        additional_feedback = params[:additional_feedback]
+        
+        begin
+          current_user.deactivate!(reason: reason, additional_feedback: additional_feedback)
+          
+          api_success(
+            message: 'Account deactivated successfully',
+            data: {
+              deactivation: {
+                reason: current_user.active_deactivation&.human_readable_reason,
+                deactivated_at: current_user.active_deactivation&.deactivated_at
+              }
+            },
+            status: :ok
+          )
+        rescue ActiveRecord::RecordInvalid => e
+          api_validation_error(errors: e.record.errors.full_messages)
+        rescue => e
+          api_error(message: e.message, status: :unprocessable_entity)
+        end
+      end
+      
+      # POST /api/v1/users/me/reactivate (Admin only or support feature)
+      def reactivate
+        # This could be admin-only or available to users after certain conditions
+        reactivated_by = params[:reactivated_by] || 'user'
+        notes = params[:notes]
+        
+        unless current_user.status_disabled?
+          api_error(message: 'Account is not deactivated', status: :bad_request)
+          return
+        end
+        
+        begin
+          current_user.reactivate!(reactivated_by: reactivated_by, notes: notes)
+          
+          api_success(
+            message: 'Account reactivated successfully',
+            data: { user: user_response(current_user) },
+            status: :ok
+          )
+        rescue => e
+          api_error(message: e.message, status: :unprocessable_entity)
+        end
+      end
+      
+      # POST /api/v1/users/me/unlink_email
+      def unlink_email
+        # Check if user has a phone number before allowing email unlinking
+        if current_user.phone.blank?
+          api_error(
+            message: 'Cannot unlink email. You must have a phone number linked to your account first.',
+            status: :bad_request
+          )
+          return
+        end
+        
+        # Check if email exists
+        if current_user.email.blank?
+          api_error(
+            message: 'No email address is linked to your account',
+            status: :bad_request
+          )
+          return
+        end
+        
+        # Unlink the email
+        if current_user.update(email: nil)
+          api_success(
+            data: { user: user_response(current_user) },
+            message: 'Email address unlinked successfully',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: current_user.errors.full_messages)
+        end
+      end
+      
+      # POST /api/v1/users/me/unlink_phone
+      def unlink_phone
+        # Check if user has an email before allowing phone unlinking
+        if current_user.email.blank?
+          api_error(
+            message: 'Cannot unlink phone. You must have an email address linked to your account first.',
+            status: :bad_request
+          )
+          return
+        end
+        
+        # Check if phone exists
+        if current_user.phone.blank?
+          api_error(
+            message: 'No phone number is linked to your account',
+            status: :bad_request
+          )
+          return
+        end
+        
+        # Unlink the phone
+        if current_user.update(phone: nil)
+          api_success(
+            data: { user: user_response(current_user) },
+            message: 'Phone number unlinked successfully',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: current_user.errors.full_messages)
+        end
+      end
+      
+      # POST /api/v1/users/me/verify_email_change
+      def verify_email_change
+        verification_token = params[:verification_token]
+        code = params[:otp_code]
+        
+        if verification_token.blank? || code.blank?
+          api_error(message: 'Verification token and OTP code are required', status: :bad_request)
+          return
+        end
+        
+        begin
+          decoded = JsonWebToken.decode(verification_token)
+          user_id = decoded[:user_id]
+          pending_email = decoded[:pending_email]
+          otp_id = decoded[:otp_id]
+          
+          unless user_id == current_user.id
+            api_error(message: 'Invalid verification token', status: :bad_request)
+            return
+          end
+          
+          otp = Otp.find_by(id: otp_id)
+          unless otp
+            api_error(message: 'Invalid verification token', status: :bad_request)
+            return
+          end
+          
+          if otp.code != code
+            otp.increment_attempts!
+            remaining_attempts = Otp::MAX_ATTEMPTS - otp.attempts
+            api_error(
+              message: 'Invalid OTP code',
+              data: { remaining_attempts: remaining_attempts },
+              status: :bad_request
+            )
+            return
+          end
+          
+          # Verify OTP and update email
+          otp.mark_verified!
+          
+          if current_user.update(email: pending_email)
+            api_success(
+              data: { user: user_response(current_user) },
+              message: 'Email updated successfully',
+              status: :ok
+            )
+          else
+            api_validation_error(errors: current_user.errors.full_messages)
+          end
+        rescue => e
+          api_error(message: 'Invalid or expired verification token', status: :bad_request)
+        end
+      end
+      
+      # POST /api/v1/users/me/verify_phone_change
+      def verify_phone_change
+        verification_token = params[:verification_token]
+        code = params[:otp_code]
+        
+        if verification_token.blank? || code.blank?
+          api_error(message: 'Verification token and OTP code are required', status: :bad_request)
+          return
+        end
+        
+        begin
+          decoded = JsonWebToken.decode(verification_token)
+          user_id = decoded[:user_id]
+          pending_phone = decoded[:pending_phone]
+          otp_id = decoded[:otp_id]
+          
+          unless user_id == current_user.id
+            api_error(message: 'Invalid verification token', status: :bad_request)
+            return
+          end
+          
+          otp = Otp.find_by(id: otp_id)
+          unless otp
+            api_error(message: 'Invalid verification token', status: :bad_request)
+            return
+          end
+          
+          if otp.code != code
+            otp.increment_attempts!
+            remaining_attempts = Otp::MAX_ATTEMPTS - otp.attempts
+            api_error(
+              message: 'Invalid OTP code',
+              data: { remaining_attempts: remaining_attempts },
+              status: :bad_request
+            )
+            return
+          end
+          
+          # Verify OTP and update phone
+          otp.mark_verified!
+          
+          if current_user.update(phone: pending_phone)
+            api_success(
+              data: { user: user_response(current_user) },
+              message: 'Phone number updated successfully',
+              status: :ok
+            )
+          else
+            api_validation_error(errors: current_user.errors.full_messages)
+          end
+        rescue => e
+          api_error(message: 'Invalid or expired verification token', status: :bad_request)
+        end
+      end
+      
+      # GET /api/v1/users/search
+      def search
+        query = params[:q]&.strip
+        if query.blank?
+          api_error(message: 'Search query is required', status: :bad_request)
+          return
+        end
+        
+        users = User.active
+                   .where("name ILIKE ? OR username ILIKE ?", "%#{query}%", "%#{query}%")
+        
+        limit = [params[:limit]&.to_i || 20, 100].min
+        offset = params[:offset]&.to_i || 0
+        total_count = users.count
+        users = users.limit(limit).offset(offset)
+        
+        api_success(
+          data: {
+            users: users.map { |user| user_basic_response(user) },
+            pagination: {
+              limit: limit,
+              offset: offset,
+              total_count: total_count,
+              has_more: (offset + limit) < total_count
+            }
+          },
+          status: :ok
+        )
+      end
+      
+      # GET /api/v1/users/:id/share_qr
+      def share_qr
+        require 'rqrcode'
+        
+        # Generate QR code for user profile with type and id embedded
+        user_url = "vibes://users/#{@user.id}"
+        qr_data = {
+          type: "User",
+          id: @user.id,
+          url: user_url
+        }.to_json
+        qr = RQRCode::QRCode.new(qr_data)
+        
+        # Get size parameter (default: 300)
+        size = params[:size].to_i
+        size = 300 if size <= 0 || size > 1000 # Limit between 1 and 1000
+        
+        # Convert to PNG
+        png = qr.as_png(
+          bit_depth: 1,
+          border_modules: 4,
+          color_mode: ChunkyPNG::COLOR_GRAYSCALE,
+          color: 'black',
+          file: nil,
+          fill: 'white',
+          module_px_size: 6,
+          resize_exactly_to: false,
+          resize_gte_to: false,
+          size: size
+        )
+        
+        # If format=image, return PNG image directly
+        if params[:format] == 'image'
+          send_data png.to_s, 
+                    type: 'image/png', 
+                    disposition: 'inline',
+                    filename: "user_#{@user.id}_qr.png"
+          return
+        end
+        
+        # Otherwise, return JSON with base64 encoded QR code
+        api_success(
+          data: {
+            qr_code: Base64.strict_encode64(png.to_s),
+            qr_image_url: "#{request.base_url}/api/v1/users/#{@user.id}/share_qr?format=image&size=#{size}",
+            user_url: user_url,
+            type: "User",
+            user: user_basic_response(@user)
+          },
+          status: :ok
+        )
+      end
+      
+      private
+
+      def merged_push_notification_settings(user)
+        prefs = user.preferences.is_a?(Hash) ? user.preferences : {}
+        existing = prefs['push_notification_settings'].is_a?(Hash) ? prefs['push_notification_settings'] : {}
+        # Ensure every key exists by applying defaults, but keep user's overrides
+        PUSH_NOTIFICATION_SETTINGS_DEFAULTS.deep_merge(existing)
+      end
+
+      def extract_push_notification_settings_param
+        raw = params[:push_notification_settings] || params.dig(:user, :push_notification_settings)
+        return nil if raw.nil?
+        raw.is_a?(ActionController::Parameters) ? raw.to_unsafe_h : raw
+      end
+
+      # Returns { settings: Hash } or { error: String }
+      def sanitize_push_notification_settings(incoming)
+        unless incoming.is_a?(Hash)
+          return { error: 'push_notification_settings must be an object' }
+        end
+
+        allowed = PUSH_NOTIFICATION_SETTINGS_DEFAULTS
+        sanitized = {}
+
+        incoming.each do |group_key, group_val|
+          group_key_s = group_key.to_s
+          unless allowed.key?(group_key_s)
+            return { error: "Unknown settings group: #{group_key_s}" }
+          end
+          unless group_val.is_a?(Hash)
+            return { error: "#{group_key_s} must be an object" }
+          end
+
+          sanitized[group_key_s] ||= {}
+          group_val.each do |setting_key, setting_val|
+            setting_key_s = setting_key.to_s
+            unless allowed[group_key_s].key?(setting_key_s)
+              return { error: "Unknown setting: #{group_key_s}.#{setting_key_s}" }
+            end
+            unless setting_val == true || setting_val == false
+              return { error: "#{group_key_s}.#{setting_key_s} must be boolean" }
+            end
+            sanitized[group_key_s][setting_key_s] = setting_val
+          end
+        end
+
+        { settings: sanitized }
+      end
+      
+      def set_user
+        @user = User.find_by(id: params[:id])
+        unless @user
+          api_error(message: 'User not found', status: :not_found)
+          return
+        end
+      end
+      
+      def set_user_for_qr
+        user_id = params[:id] || params[:user_id]
+        @user = User.find_by(id: user_id)
+        unless @user
+          api_error(message: 'User not found', status: :not_found)
+          return
+        end
+      end
+      
+      def user_params
+        params.require(:user).permit(:name, :username, :date_of_birth, :email, :phone, :bio)
+      end
+
+      # Moments for GET /api/v1/users/me
+      # - venue_manager/brand: last 1 year's moments + event images (posters, photos)
+      # - regular users: user uploaded moments
+      def me_moments(user)
+        base_url = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com'
+        since = 1.year.ago
+
+        if user.role_venue_manager? || user.role_brand?
+          # Event stories (moments) + event images from events in last 1 year
+          event_ids = event_ids_for_venue_or_brand(user)
+          return [] if event_ids.empty?
+
+          stories = []
+          # Moments linked to events
+          moments = Moment.visible
+                         .where(event_id: event_ids)
+                         .where('created_at >= ?', since)
+                         .order(created_at: :desc)
+                         .includes(:user, :event)
+
+          moments.each do |moment|
+            stories << { id: moment.id, type: 'moment', story_type: moment.media_type, thumbnail: moment_thumbnail_url(moment), url: moment_media_url(moment), download_url: moment_download_url(moment), event_id: moment.event_id, venue_id: moment.venue_id, created_at: moment.created_at.iso8601 }
+          end
+
+          # Event posters and photos
+          events = Event.where(id: event_ids).where('created_at >= ?', since)
+
+          events.each do |event|
+            if event.has_poster?
+              stories << { id: "event_poster_#{event.id}", type: 'event_image', story_type: 'event_poster', thumbnail: event.poster_image_url(host: base_url), url: event.poster_image_url(host: base_url), event_id: event.id, venue_id: event.venue_id, created_at: event.created_at.iso8601 }
+            end
+            event.photos.each do |photo|
+              photo_url = url_for(photo) rescue nil
+              next unless photo_url
+              stories << { id: "event_photo_#{event.id}_#{photo.id}", type: 'event_image', story_type: 'event_photo', thumbnail: photo_url, url: photo_url, event_id: event.id, venue_id: event.venue_id, created_at: event.created_at.iso8601 }
+            end
+          end
+
+          stories.sort_by { |s| s[:created_at] }.reverse.first(100)
+        else
+          # User uploaded stories (their moments)
+          user.moments.for_feed.order(created_at: :desc).limit(50).map do |moment|
+            { id: moment.id, type: 'moment', story_type: moment.media_type, thumbnail: moment_thumbnail_url(moment), url: moment_media_url(moment), download_url: moment_download_url(moment), event_id: moment.event_id, venue_id: moment.venue_id, created_at: moment.created_at.iso8601 }
+          end
+        end
+      rescue => e
+        Rails.logger.error "me_moments error: #{e.message}"
+        []
+      end
+
+      def event_ids_for_venue_or_brand(user)
+        ids = []
+        if user.role_venue_manager? && user.venues.any?
+          ids += Event.where(venue_id: user.venues.select(:id)).pluck(:id)
+        end
+        if user.role_brand?
+          ids += Event.where(collaborator_type: 'User', collaborator_id: user.id).pluck(:id)
+        end
+        ids.uniq
+      end
+
+      # Events with poster for venue_manager/brand (last 1 year)
+      def me_events_with_poster(user)
+        base_url = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com'
+        since = 1.year.ago
+        event_ids = event_ids_for_venue_or_brand(user)
+        return [] if event_ids.empty?
+
+        Event.where(id: event_ids)
+             .where('created_at >= ?', since)
+             .order(created_at: :desc)
+             .limit(200)
+             .includes(:venue)
+             .select { |e| e.has_poster? }
+             .first(50)
+             .map do |event|
+          {
+            id: event.id,
+            title: event.title,
+            poster_url: event.poster_image_url(host: base_url),
+            venue_id: event.venue_id,
+            venue: event.venue ? { id: event.venue.id, name: event.venue.name } : nil,
+            starts_at: event.starts_at&.iso8601,
+            ends_at: event.ends_at&.iso8601,
+            status: event.status,
+            created_at: event.created_at.iso8601
+          }
+        end
+      rescue => e
+        Rails.logger.error "me_events_with_poster error: #{e.message}"
+        []
+      end
+
+      def moment_thumbnail_url(moment)
+        return nil unless moment.video.attached? || moment.image.attached?
+        moment.video.attached? ? api_v1_moment_thumbnail_url(moment) : url_for(moment.image)
+      end
+
+      def moment_media_url(moment)
+        return nil unless moment.video.attached? || moment.image.attached?
+        moment.video.attached? ? url_for(moment.video) : url_for(moment.image)
+      end
+
+      def moment_download_url(moment)
+        return nil unless moment.video.attached? || moment.image.attached?
+        api_v1_moment_download_url(moment)
+      end
+
+      def normalize_phone(phone)
+        return nil if phone.blank?
+        phone.gsub(/\D/, '')
+      end
+      
+      def user_response(user)
+        pr_partnership = user.venue_pr_partnerships&.active&.last
+
+        {
+          id: user.id,
+          email: user.email,
+          phone: user.phone,
+          username: user.username,
+          name: user.name,
+          date_of_birth: user.date_of_birth,
+          role: pr_partnership&.role || user.role,
+          venue_id: (user.role_venue_manager? ? user.venues.first&.id : nil),
+          pr_venue_id: pr_partnership&.venue_id,
+          status: user.status,
+          avatar_url: (user.avatar_url == DEFAULT_AVATAR_PATH ? default_avatar_url : user.avatar_url),
+          profile_picture_url: user.profile_picture.attached? ? url_for(user.profile_picture) : default_avatar_url,
+          bio: user.respond_to?(:bio) ? user.bio : nil,
+          followers_count: user.followers_count,
+          following_count: user.following_count,
+          events_count: calculate_events_count(user),
+          categories: user.role_artist? ? user.categories.map { |c| { id: c.id, name: c.name } } : [],
+          is_following: current_user.present? ? current_user.following?(user) : false,
+          is_followed_by: current_user.present? ? current_user.followed_by?(user) : false,
+          preferences: user.preferences,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      rescue => e
+        Rails.logger.error "User response error: #{e.message}"
+
+        pr_partnership = user.venue_pr_partnerships&.active&.last
+
+        {
+          id: user.id,
+          email: user.email,
+          phone: user.phone,
+          username: user.username,
+          name: user.name,
+          date_of_birth: user.date_of_birth,
+          role: pr_partnership&.role || user.role,
+          venue_id: (user.role_venue_manager? ? user.venues.first&.id : nil),
+          pr_venue_id: pr_partnership&.venue_id,
+          status: user.status,
+          avatar_url: default_avatar_url,
+          profile_picture_url: default_avatar_url,
+          bio: user.respond_to?(:bio) ? user.bio : nil,
+          followers_count: 0,
+          following_count: 0,
+          events_count: 0,
+          categories: [],
+          is_following: false,
+          is_followed_by: false,
+          created_at: user.created_at,
+          updated_at: user.updated_at
+        }
+      end
+      
+      def calculate_events_count(user)
+        count = 0
+        
+        # Count events as artist (through EventArtist)
+        if user.role_artist?
+          count += EventArtist.where(artist_id: user.id).count
+        end
+        
+        # Count events as venue owner (through venues)
+        if user.venues.any?
+          count += user.venues.sum { |v| v.events.count }
+        end
+        
+        count
+      end
+      
+      def user_profile_response(user)
+        follow_status = get_follow_request_status(user)
+        
+        {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.venue_pr_partnerships&.active&.last&.role || user.role,
+          avatar_url: user.respond_to?(:avatar_url) && user.avatar_url.present? ? user.avatar_url : default_avatar_url,
+          bio: user.respond_to?(:bio) ? user.bio : nil,
+          date_of_birth: user.date_of_birth,
+          stats: {
+            followers_count: user.followers_count,
+            following_count: user.following_count,
+            events_created: user.venues.sum { |v| v.events.count },
+            venues_owned: user.venues.count,
+            bookings_count: user.bookings.count
+          },
+          is_following: current_user.following?(user),
+          is_followed_by: current_user.followed_by?(user),
+          has_pending_request_to: follow_status[:has_pending_request_to],
+          has_pending_request_from: follow_status[:has_pending_request_from],
+          pending_request_id: follow_status[:pending_request_id],
+          pending_request_to_id: follow_status[:pending_request_to_id],
+          is_me: user == current_user,
+          created_at: user.created_at
+        }
+      end
+      
+      # Get follow request status between current_user and target user
+      def get_follow_request_status(target_user)
+        return { 
+          has_pending_request_to: false, 
+          has_pending_request_from: false, 
+          pending_request_id: nil,
+          pending_request_to_id: nil
+        } if target_user == current_user
+        
+        # Check if current_user sent a pending request to target_user
+        pending_request_to = current_user.follow_requests_sent.pending.find_by(requested_id: target_user.id)
+        
+        # Check if current_user received a pending request from target_user
+        pending_request_from = current_user.follow_requests_received.pending.find_by(requester_id: target_user.id)
+        
+        {
+          has_pending_request_to: pending_request_to.present?,
+          has_pending_request_from: pending_request_from.present?,
+          pending_request_id: pending_request_from&.id,  # ID of request received (for Accept/Reject)
+          pending_request_to_id: pending_request_to&.id  # ID of request sent (for Cancel)
+        }
+      end
+      
+      def user_basic_response(user)
+        {
+          id: user.id,
+          username: user.username,
+          name: user.name,
+          role: user.venue_pr_partnerships&.active&.last&.role || user.role,
+          avatar_url: user.respond_to?(:avatar_url) && user.avatar_url.present? ? user.avatar_url : default_avatar_url
+        }
+      end
+    end
+  end
+end
+

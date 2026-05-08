@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <title>Venue 360°</title>
+  <!--
+    Venue equirectangular 360° MP4 + optional clickable hotspots that open full-size images.
+
+    Query:
+      url=<encoded-mp4>   (required)
+      hotspots=<url-encoded-json-array>   (optional)
+
+    Hotspots JSON (example):
+      [
+        { "yaw": -25, "pitch": -8, "image": "https://…/photo1.jpg", "label": "Stage" },
+        { "yaw": 40, "pitch": 3, "image": "https://…/photo2.jpg", "label": "Bar area" }
+      ]
+    - yaw: horizontal angle in degrees (left negative, right positive), 0 = forward (-Z).
+    - pitch: vertical angle in degrees (up positive, down negative).
+    - image: HTTPS URL shown in the expand modal (must allow hotlinking / CORS if needed).
+    - label: optional caption under the marker and in the modal.
+
+    Flutter: pass hotspots as a second query param:
+      queryParameters: {
+        'url': videoUrl,
+        'hotspots': jsonEncode([...]),
+      }
+  -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #111; font-family: system-ui, sans-serif; overflow: hidden; }
+    a-scene { width: 100vw; height: 100vh; }
+    #overlay {
+      position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; pointer-events: none;
+      color: #fff; text-align: center; padding: 1rem; box-sizing: border-box;
+    }
+    #overlay.has-error { background: rgba(0,0,0,.75); pointer-events: auto; }
+    #overlay button {
+      pointer-events: auto; margin-top: 1rem; padding: 0.75rem 1.25rem;
+      font-size: 1rem; border: none; border-radius: 8px; background: #fff; color: #111;
+      cursor: pointer;
+    }
+    #overlay button.secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); }
+    .hint { font-size: 0.9rem; opacity: 0.85; max-width: 22rem; margin-top: 0.5rem; }
+    #status { font-size: 0.95rem; }
+
+    /* Expanded image modal (above A-Frame canvas) */
+    #img-modal {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,.88); flex-direction: column; align-items: center; justify-content: center;
+      padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+               max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      box-sizing: border-box; pointer-events: auto;
+    }
+    #img-modal.open { display: flex; }
+    #img-modal img {
+      max-width: min(96vw, 1200px); max-height: min(78vh, 900px); width: auto; height: auto;
+      object-fit: contain; border-radius: 8px; box-shadow: 0 8px 32px rgba(0,0,0,.5);
+    }
+    #img-modal-title {
+      color: #fff; margin-top: 0.75rem; font-size: 1.05rem; text-align: center; max-width: 90vw;
+    }
+    #modal-close {
+      position: absolute; top: max(0.75rem, env(safe-area-inset-top)); right: max(0.75rem, env(safe-area-inset-right));
+      width: 44px; height: 44px; border: none; border-radius: 50%; background: rgba(255,255,255,.15);
+      color: #fff; font-size: 1.5rem; line-height: 1; cursor: pointer; z-index: 101;
+    }
+    #modal-close:active { background: rgba(255,255,255,.3); }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <div id="status">Loading venue 360°…</div>
+    <p class="hint" id="hint" style="display:none">Look around, then click the markers to view photos.</p>
+    <button type="button" id="btn-sound" style="display:none">Sound on</button>
+    <button type="button" id="btn-retry" class="secondary" style="display:none">Retry</button>
+  </div>
+
+  <div id="img-modal" aria-modal="true" role="dialog">
+    <button type="button" id="modal-close" aria-label="Close">×</button>
+    <img id="modal-img" src="" alt="" />
+    <div id="img-modal-title"></div>
+  </div>
+
+  <a-scene
+    id="scene"
+    style="display:none"
+    loading-screen="dotsColor: white; backgroundColor: #111"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    renderer="antialias: true; colorManagement: true"
+  >
+    <a-assets timeout="120000">
+      <video
+        id="venue-360-video"
+        playsinline
+        webkit-playsinline
+        x5-playsinline
+        crossorigin="anonymous"
+        preload="auto"
+        loop
+        disablepictureinpicture
+        controlslist="nodownload noplaybackrate noremoteplayback"
+      ></video>
+    </a-assets>
+
+    <a-videosphere
+      id="sphere"
+      src="#venue-360-video"
+      radius="100"
+    ></a-videosphere>
+
+    <!-- Camera at center of sphere; cursor raycasts at .hotspot -->
+    <a-entity id="camera-rig" position="0 0 0">
+      <a-camera
+        id="main-camera"
+        look-controls="pointerLockEnabled: false"
+        wasd-controls-enabled="false"
+      >
+        <a-cursor
+          id="af-cursor"
+          raycaster="objects: .hotspot; far: 200"
+          geometry="primitive: ring; radiusInner: 0.018; radiusOuter: 0.028"
+          material="color: #ffffff; shader: flat; opacity: 0.95"
+          animation__click="property: scale; startEvents: click; easing: easeInCubic; dur: 150; from: 0.85 0.85 0.85; to: 1 1 1"
+          cursor="fuse: false"
+        ></a-cursor>
+      </a-camera>
+    </a-entity>
+
+    <a-entity id="hotspots-root"></a-entity>
+  </a-scene>
+
+  <script>
+    (function () {
+      var HOTSPOT_RADIUS = 98;
+      var MARKER_SIZE = 0.14;
+
+      var params = new URLSearchParams(window.location.search);
+      var raw = params.get('url') || params.get('video') || params.get('src');
+      if (!raw && window.location.hash.length > 1) {
+        var h = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        raw = h.get('url') || h.get('video');
+      }
+
+      var overlay = document.getElementById('overlay');
+      var statusEl = document.getElementById('status');
+      var hintEl = document.getElementById('hint');
+      var btnSound = document.getElementById('btn-sound');
+      var btnRetry = document.getElementById('btn-retry');
+      var btnMotion = null;
+      var scene = document.getElementById('scene');
+      var video = document.getElementById('venue-360-video');
+      var imgModal = document.getElementById('img-modal');
+      var modalImg = document.getElementById('modal-img');
+      var modalTitle = document.getElementById('img-modal-title');
+      var modalClose = document.getElementById('modal-close');
+      var hotspotsRoot = document.getElementById('hotspots-root');
+
+      function fail(msg) {
+        statusEl.textContent = msg || 'Could not load venue 360° video.';
+        overlay.classList.add('has-error');
+        btnRetry.style.display = 'inline-block';
+        hintEl.style.display = 'block';
+      }
+
+      function absUrl(u) {
+        try {
+          return new URL(u, window.location.href).href;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      function spherePosition(r, yawDeg, pitchDeg) {
+        var yaw = yawDeg * Math.PI / 180;
+        var pitch = pitchDeg * Math.PI / 180;
+        var x = r * Math.cos(pitch) * Math.sin(yaw);
+        var y = r * Math.sin(pitch);
+        var z = -r * Math.cos(pitch) * Math.cos(yaw);
+        return x + ' ' + y + ' ' + z;
+      }
+
+      function isHttpsImageUrl(u) {
+        return u && /^https:\/\//i.test(String(u).trim());
+      }
+
+      function parseHotspots() {
+        var rawH = params.get('hotspots');
+        if (!rawH || !String(rawH).trim()) return [];
+        try {
+          var decoded = decodeURIComponent(rawH.trim());
+          var arr = JSON.parse(decoded);
+          return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+          console.warn('venue_360: invalid hotspots JSON', e);
+          return [];
+        }
+      }
+
+      function openModal(imageUrl, title) {
+        // Pause immersive video while interacting with modal content.
+        try { video && video.pause && video.pause(); } catch (e) {}
+        modalImg.src = imageUrl;
+        modalImg.alt = title || '';
+        modalTitle.textContent = title || '';
+        imgModal.classList.add('open');
+      }
+
+      function closeModal() {
+        imgModal.classList.remove('open');
+        modalImg.removeAttribute('src');
+        modalTitle.textContent = '';
+        // Resume playback after closing modal.
+        try { video && video.play && video.play(); } catch (e) {}
+      }
+
+      modalClose.addEventListener('click', closeModal);
+      imgModal.addEventListener('click', function (ev) {
+        if (ev.target === imgModal) closeModal();
+      });
+
+      // Prevent long-press context menu / native player behaviors in WebViews.
+      document.addEventListener('contextmenu', function (e) { e.preventDefault(); }, { passive: false });
+
+      function buildHotspots(list) {
+        list.forEach(function (item, index) {
+          var yaw = typeof item.yaw === 'number' ? item.yaw : parseFloat(item.yaw) || 0;
+          var pitch = typeof item.pitch === 'number' ? item.pitch : parseFloat(item.pitch) || 0;
+          var imageUrl = item.image || item.img || item.url;
+          if (!isHttpsImageUrl(imageUrl)) {
+            console.warn('venue_360: skip hotspot without https image URL', item);
+            return;
+          }
+          var label = item.label || item.title || '';
+
+          var pos = spherePosition(HOTSPOT_RADIUS, yaw, pitch);
+          var wrap = document.createElement('a-entity');
+          wrap.setAttribute('position', pos);
+          wrap.setAttribute('class', 'hotspot');
+          wrap.setAttribute('data-image', absUrl(imageUrl));
+          wrap.setAttribute('data-label', label);
+
+          var ring = document.createElement('a-ring');
+          ring.setAttribute('geometry', 'radiusInner: ' + (MARKER_SIZE * 0.55) + '; radiusOuter: ' + MARKER_SIZE);
+          ring.setAttribute('material', 'color: #00e5a8; shader: flat; opacity: 0.95; side: double');
+          ring.setAttribute('rotation', '-90 0 0');
+          wrap.appendChild(ring);
+
+          var core = document.createElement('a-sphere');
+          core.setAttribute('radius', (MARKER_SIZE * 0.32).toFixed(3));
+          core.setAttribute('material', 'color: #ffffff; shader: flat; opacity: 0.9');
+          wrap.appendChild(core);
+
+          wrap.addEventListener('click', function (e) {
+            e.stopPropagation();
+            openModal(wrap.getAttribute('data-image'), wrap.getAttribute('data-label'));
+          });
+
+          hotspotsRoot.appendChild(wrap);
+        });
+      }
+
+      if (!raw || !String(raw).trim()) {
+        fail('Missing url. Pass the venue equirectangular MP4: ?url=' + encodeURIComponent('https://…/venue-360.mp4'));
+        return;
+      }
+
+      var videoUrl = absUrl(decodeURIComponent(raw.trim()));
+      if (!videoUrl || !/^https?:\/\//i.test(videoUrl)) {
+        fail('Invalid video URL.');
+        return;
+      }
+
+      buildHotspots(parseHotspots());
+
+      video.setAttribute('src', videoUrl);
+      video.muted = true;
+      video.setAttribute('muted', '');
+      video.playsInline = true;
+      video.controls = false;
+      video.disablePictureInPicture = true;
+
+      // In some iOS WebViews, taps may show native controls unless we prevent it.
+      video.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); });
+      video.addEventListener('touchstart', function (e) { e.preventDefault(); }, { passive: false });
+
+      video.addEventListener('error', function () {
+        fail('Video failed to load (check URL, CORS, and format).');
+        scene.style.display = 'none';
+      });
+
+      video.addEventListener('loadeddata', function () {
+        statusEl.style.display = 'none';
+        hintEl.style.display = 'block';
+        scene.style.display = 'block';
+        overlay.classList.remove('has-error');
+        var p = video.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(function () {
+            statusEl.style.display = 'block';
+            statusEl.textContent = 'Tap to play';
+            overlay.classList.add('has-error');
+            overlay.style.pointerEvents = 'auto';
+            var once = function () {
+              video.play();
+              overlay.style.pointerEvents = '';
+              overlay.classList.remove('has-error');
+              statusEl.style.display = 'none';
+              document.body.removeEventListener('click', once);
+            };
+            document.body.addEventListener('click', once);
+          });
+        }
+      });
+
+      btnSound.addEventListener('click', function () {
+        video.muted = false;
+        video.removeAttribute('muted');
+        btnSound.style.display = 'none';
+        video.play();
+      });
+
+      btnRetry.addEventListener('click', function () {
+        window.location.reload();
+      });
+
+      video.addEventListener('playing', function () {
+        btnSound.style.display = 'inline-block';
+        statusEl.style.display = 'none';
+      });
+
+      scene.addEventListener('loaded', function () {
+        var cam = document.getElementById('main-camera');
+        if (cam) cam.setAttribute('look-controls', 'touchEnabled: true; mouseEnabled: true; pointerLockEnabled: false');
+
+        var look = cam && cam.components && cam.components['look-controls'];
+
+        // Add "Enable Motion" button for iOS permission flow (deviceorientation).
+        try {
+          var needsMotionPerm = (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function');
+          if (needsMotionPerm) {
+            btnMotion = document.createElement('button');
+            btnMotion.type = 'button';
+            btnMotion.textContent = 'Enable Motion';
+            btnMotion.className = 'secondary';
+            btnMotion.style.display = 'inline-block';
+            btnMotion.style.marginTop = '0.75rem';
+            overlay.appendChild(btnMotion);
+            btnMotion.addEventListener('click', function () {
+              DeviceOrientationEvent.requestPermission().then(function (state) {
+                if (state === 'granted') {
+                  if (look) look.magicWindowTrackingEnabled = true;
+                  btnMotion.style.display = 'none';
+                } else {
+                  fail('Motion permission denied. You can still drag to look around.');
+                }
+              }).catch(function () {
+                fail('Motion permission failed. You can still drag to look around.');
+              });
+            });
+          }
+        } catch (e) {}
+
+        // Pinch-to-zoom (adjust camera FOV) for WebView.
+        var fov = 80;
+        try { fov = cam.getAttribute('camera').fov || fov; } catch (e) {}
+        var pinchStartDist = null;
+        var pinchStartFov = null;
+
+        function dist(t1, t2) {
+          var dx = t1.clientX - t2.clientX;
+          var dy = t1.clientY - t2.clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+
+        function setFov(next) {
+          next = Math.max(30, Math.min(110, next));
+          fov = next;
+          cam.setAttribute('camera', 'fov', fov);
+        }
+
+        scene.addEventListener('touchstart', function (e) {
+          if (!e.touches || e.touches.length !== 2) return;
+          pinchStartDist = dist(e.touches[0], e.touches[1]);
+          pinchStartFov = fov;
+        }, { passive: true });
+
+        scene.addEventListener('touchmove', function (e) {
+          if (!e.touches || e.touches.length !== 2) return;
+          if (!pinchStartDist) return;
+          var d = dist(e.touches[0], e.touches[1]);
+          if (!d) return;
+          var ratio = pinchStartDist / d; // pinch in -> zoom in (lower fov)
+          setFov(pinchStartFov * ratio);
+        }, { passive: true });
+
+        scene.addEventListener('touchend', function (e) {
+          if (!e.touches || e.touches.length < 2) {
+            pinchStartDist = null;
+            pinchStartFov = null;
+          }
+        }, { passive: true });
+      });
+    })();
+  </script>
+</body>
+</html>

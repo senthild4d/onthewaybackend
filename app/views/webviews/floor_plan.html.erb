@@ -1,0 +1,2063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title><%= @floor_plan.name %> - Floor Plan</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/konva@9.2.0/konva.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      overflow: hidden;
+      background: #f3f4f6 !important;
+      color: #111827;
+      touch-action: none;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    
+    #container {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #f3f4f6;
+      position: relative;
+    }
+    
+    #floor-plan-container {
+      border-radius: 16px;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
+      background: #ffffff;
+      overflow: visible;
+      min-width: 300px;
+      min-height: 300px;
+    }
+    
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #374151;
+      font-size: 18px;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid rgba(55, 65, 81, 0.2);
+      border-top-color: #374151;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      color: #ff6b81;
+      font-size: 16px;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+      gap: 10px;
+    }
+
+    .toolbar {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #615d5d;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      z-index: 1000;
+      user-select: none;
+    }
+
+    .tool-button {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #111827;
+      font-size: 12px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 64px;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .tool-button:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    .tool-button.active {
+      background: #111827;
+      color: #ffffff;
+      border-color: #111827;
+    }
+
+    .tool-button.save-button {
+      background: #16a34a;
+      color: #ffffff;
+      border-color: #16a34a;
+    }
+
+    .tool-button.save-button[disabled] {
+      background: #9ca3af;
+      border-color: #9ca3af;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .icon-panel {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #615d5d;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      z-index: 1000;
+    }
+
+    .icon-panel.active {
+      display: flex;
+    }
+
+    .icon-button {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #111827;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 56px;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .icon-button:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    .option-panel {
+      position: fixed;
+      bottom: 84px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #615d5d;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      z-index: 1000;
+    }
+
+    .option-panel.active {
+      display: flex;
+    }
+
+    .option-button {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      color: #111827;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      min-width: 64px;
+      text-align: center;
+      transition: all 0.15s ease;
+    }
+
+    .option-button:hover {
+      background: #eef2ff;
+      border-color: #c7d2fe;
+    }
+
+    .option-button.active {
+      background: #111827;
+      color: #ffffff;
+      border-color: #111827;
+    }
+
+    .selection-panel {
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      display: none;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      background: #615d5d;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+      z-index: 1001;
+      font-size: 12px;
+    }
+
+    .selection-panel.active {
+      display: flex;
+    }
+
+    .selection-panel input[type="text"] {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 6px 8px;
+      font-size: 12px;
+      min-width: 140px;
+    }
+
+    .selection-panel input[type="color"] {
+      border: none;
+      background: transparent;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .selection-panel .icon-btn {
+      border: 1px solid #e5e7eb;
+      background: #f9fafb;
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #111827;
+    }
+
+    .selection-panel .icon-btn:hover {
+      background: #fee2e2;
+      border-color: #fecaca;
+      color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="loading" class="loading">
+      <div class="loading-spinner"></div>
+      <div>Loading floor plan...</div>
+      <div style="font-size: 12px; margin-top: 10px; opacity: 0.7;">
+        Waiting for Konva.js...
+      </div>
+    </div>
+    <div id="floor-plan-container" style="display: none;"></div>
+  </div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="tool-button" data-tool="table">Table</button>
+    <button class="tool-button" data-tool="chair">Chair</button>
+    <button class="tool-button" data-tool="zone">Zone</button>
+    <button class="tool-button" data-tool="wall">Wall</button>
+    <button class="tool-button" data-tool="text">Text</button>
+    <button class="tool-button" data-tool="icon">Icons</button>
+    <button class="tool-button save-button" id="save-button">Save</button>
+  </div>
+
+  <div class="icon-panel" id="icon-panel">
+    <button class="icon-button" data-icon="bar"><i class="fa-solid fa-wine-glass"></i></button>
+    <button class="icon-button" data-icon="kitchen"><i class="fa-solid fa-kitchen-set"></i></button>
+    <button class="icon-button" data-icon="restroom"><i class="fa-solid fa-restroom"></i></button>
+    <button class="icon-button" data-icon="stage"><i class="fa-solid fa-music"></i></button>
+    <button class="icon-button" data-icon="exit"><i class="fa-solid fa-door-open"></i></button>
+    <button class="icon-button" data-icon="entrance"><i class="fa-solid fa-door-closed"></i></button>
+  </div>
+
+  <div class="option-panel" id="option-panel">
+    <button class="option-button" data-tool="table" data-option="square">Square</button>
+    <button class="option-button" data-tool="table" data-option="rectangle">Rectangle</button>
+    <button class="option-button" data-tool="table" data-option="circle">Circle</button>
+    <button class="option-button" data-tool="table" data-option="oval">Oval</button>
+    <button class="option-button" data-tool="zone" data-option="square">Zone Square</button>
+    <button class="option-button" data-tool="zone" data-option="rectangle">Zone Rect</button>
+    <button class="option-button" data-tool="chair" data-option="circle">Chair Circle</button>
+    <button class="option-button" data-tool="chair" data-option="square">Chair Square</button>
+    <button class="option-button" data-tool="wall" data-option="horizontal">Wall H</button>
+    <button class="option-button" data-tool="wall" data-option="vertical">Wall V</button>
+  </div>
+
+  <div class="selection-panel" id="selection-panel">
+    <input type="text" id="selection-name" placeholder="Name">
+    <input type="color" id="selection-color" value="#9ca3af">
+    <button class="icon-btn" id="selection-delete" title="Delete">
+      <i class="fa-solid fa-trash"></i>
+    </button>
+  </div>
+  
+  <!-- Fallback if JavaScript fails -->
+  <noscript>
+    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(255, 107, 129, 0.9); color: #fff; padding: 20px; border-radius: 10px; text-align: center; z-index: 10001;">
+      <h2>JavaScript Required</h2>
+      <p>Please enable JavaScript to view the floor plan.</p>
+    </div>
+  </noscript>
+
+  <script>
+    // Immediate test to see if JavaScript is running
+    console.log('=== FLOOR PLAN WEBVIEW STARTING ===');
+    console.log('Page loaded at:', new Date().toISOString());
+    
+    // Show immediate feedback
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('DOM Content Loaded');
+      const loadingEl = document.getElementById('loading');
+      if (loadingEl) {
+        console.log('Loading element found');
+      } else {
+        console.error('Loading element NOT found!');
+      }
+    });
+    
+    (function() {
+      console.log('Starting floor plan renderer...');
+      
+      // Wait for Konva to load with timeout
+      let konvaLoadAttempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      
+      function checkKonva() {
+        konvaLoadAttempts++;
+        console.log('Checking Konva, attempt:', konvaLoadAttempts);
+        
+        if (typeof Konva !== 'undefined') {
+          console.log('Konva.js loaded successfully!');
+          initializeFloorPlan();
+        } else if (konvaLoadAttempts < maxAttempts) {
+          setTimeout(checkKonva, 100);
+        } else {
+          console.error('Konva.js failed to load after', maxAttempts, 'attempts');
+          document.getElementById('loading').innerHTML = 
+            '<div class="error">Failed to load Konva.js library.<br>Please check your internet connection.<br><small>Attempted to load from CDN</small></div>';
+        }
+      }
+      
+      // Start checking for Konva
+      setTimeout(checkKonva, 100);
+      
+      function initializeFloorPlan() {
+      
+        const canvasData = <%= @canvas_data.to_json.html_safe %>;
+        const venueData = <%= @venue_data.to_json.html_safe %>;
+        const apiContext = {
+          venueId: "<%= @venue.id %>",
+          floorPlanId: "<%= @floor_plan.id %>"
+        };
+        if (!window.FLOOR_PLAN_AUTH_TOKEN && "<%= @auth_token.to_s %>") {
+          window.FLOOR_PLAN_AUTH_TOKEN = "<%= @auth_token.to_s %>";
+        }
+        
+        console.log('Canvas data:', canvasData);
+        console.log('Venue data:', venueData);
+        
+        if (!canvasData) {
+          console.error('No canvas data provided');
+          document.getElementById('loading').innerHTML = 
+            '<div class="error">No floor plan data available</div>';
+          return;
+        }
+        
+        let stage, layer, backgroundLayer, transformer;
+        let currentTool = null;
+        let currentIcon = null;
+        let selectedNode = null;
+        let hoveredNode = null;
+        let currentShapeOption = {
+          table: 'rectangle',
+          chair: 'circle',
+          zone: 'rectangle',
+          wall: 'horizontal'
+        };
+        let scale = 1;
+        let stageWidth, stageHeight;
+        let defaultZoneId = (canvasData.zones && canvasData.zones.length > 0) ? canvasData.zones[0].id : null;
+        const authToken = new URLSearchParams(window.location.search).get('auth_token') ||
+          new URLSearchParams(window.location.search).get('token') ||
+          window.localStorage.getItem('auth_token') ||
+          window.localStorage.getItem('token') ||
+          window.FLOOR_PLAN_AUTH_TOKEN;
+        const apiBase = `${window.location.origin}/api/v1/venues/${apiContext.venueId}/floor_plans/${apiContext.floorPlanId}`;
+        const pendingUpdates = new Map();
+        const pendingCreates = new Set();
+        const pendingUpdateNodes = new Set();
+        const pendingDeletes = new Set();
+        let hasUnsavedChanges = false;
+      
+      function initStage() {
+        const container = document.getElementById('container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        
+        stageWidth = canvasData.width || 1000;
+        stageHeight = canvasData.height || 1000;
+        
+        console.log('Stage dimensions:', stageWidth, 'x', stageHeight);
+        console.log('Container dimensions:', containerWidth, 'x', containerHeight);
+        
+        const scaleX = containerWidth * 0.85 / stageWidth;
+        const scaleY = containerHeight * 0.85 / stageHeight;
+        scale = Math.min(scaleX, scaleY, 1);
+        
+        const scaledWidth = stageWidth * scale;
+        const scaledHeight = stageHeight * scale;
+        
+        console.log('Scaled dimensions:', scaledWidth, 'x', scaledHeight, 'scale:', scale);
+        
+        stage = new Konva.Stage({
+          container: 'floor-plan-container',
+          width: scaledWidth,
+          height: scaledHeight
+        });
+        
+        // Background layer for grid
+        backgroundLayer = new Konva.Layer();
+        stage.add(backgroundLayer);
+        
+        // Main content layer
+        layer = new Konva.Layer();
+        stage.add(layer);
+        
+        // Draw background grid
+        drawBackgroundGrid();
+        
+        enableDragAndZoom();
+        setupToolbar();
+        setupSaveButton();
+        setupIconPanel();
+        setupOptionPanel();
+        enablePlacement();
+        enableSelection();
+        setSaveButtonState(false, false);
+      }
+      
+      function drawBackgroundGrid() {
+        const gridSize = 50;
+        const gridColor = 'rgba(148, 163, 184, 0.35)';
+        const majorGridColor = 'rgba(148, 163, 184, 0.6)';
+        
+        // Draw floor area background first (behind everything)
+        const floorBg = new Konva.Rect({
+          x: 0,
+          y: 0,
+          width: stageWidth,
+          height: stageHeight,
+          fill: '#f8fafc',
+          listening: false
+        });
+        backgroundLayer.add(floorBg);
+        
+        // Draw grid lines on top
+        for (let x = 0; x <= stageWidth; x += gridSize) {
+          const isMajor = x % (gridSize * 5) === 0;
+          const line = new Konva.Line({
+            points: [x, 0, x, stageHeight],
+            stroke: isMajor ? majorGridColor : gridColor,
+            strokeWidth: isMajor ? 1 : 0.5,
+            listening: false
+          });
+          backgroundLayer.add(line);
+        }
+        
+        for (let y = 0; y <= stageHeight; y += gridSize) {
+          const isMajor = y % (gridSize * 5) === 0;
+          const line = new Konva.Line({
+            points: [0, y, stageWidth, y],
+            stroke: isMajor ? majorGridColor : gridColor,
+            strokeWidth: isMajor ? 1 : 0.5,
+            listening: false
+          });
+          backgroundLayer.add(line);
+        }
+        
+        backgroundLayer.draw();
+      }
+      
+      function enableDragAndZoom() {
+        let lastCenter = null;
+        let lastDist = 0;
+        
+        stage.on('touchstart', function(e) {
+          const touch1 = e.evt.touches[0];
+          const touch2 = e.evt.touches[1];
+          if (touch1 && touch2) {
+            stage.stopDrag();
+            lastCenter = getCenter(touch1, touch2);
+            lastDist = getDistance(touch1, touch2);
+          }
+        });
+        
+        stage.on('touchmove', function(e) {
+          const touch1 = e.evt.touches[0];
+          const touch2 = e.evt.touches[1];
+          if (touch1 && touch2) {
+            e.evt.preventDefault();
+            const newDist = getDistance(touch1, touch2);
+            if (lastDist && lastCenter) {
+              const newCenter = getCenter(touch1, touch2);
+              const pointTo = {
+                x: (newCenter.x - stage.x()) / scale,
+                y: (newCenter.y - stage.y()) / scale
+              };
+              const newScale = scale * (newDist / lastDist);
+              const newScaleLimit = Math.max(0.5, Math.min(3, newScale));
+              const dx = newCenter.x - lastCenter.x;
+              const dy = newCenter.y - lastCenter.y;
+              scale = newScaleLimit;
+              stage.scale({ x: scale, y: scale });
+              stage.position({
+                x: newCenter.x - pointTo.x * scale + dx,
+                y: newCenter.y - pointTo.y * scale + dy
+              });
+            }
+            lastDist = newDist;
+            lastCenter = getCenter(touch1, touch2);
+          }
+        });
+        
+        stage.on('wheel', function(e) {
+          e.evt.preventDefault();
+          const oldScale = scale;
+          const pointer = stage.getPointerPosition();
+          const mousePointTo = {
+            x: (pointer.x - stage.x()) / oldScale,
+            y: (pointer.y - stage.y()) / oldScale
+          };
+          const newScale = e.evt.deltaY > 0 ? oldScale * 0.9 : oldScale * 1.1;
+          const newScaleLimit = Math.max(0.5, Math.min(3, newScale));
+          scale = newScaleLimit;
+          stage.scale({ x: scale, y: scale });
+          const newPos = {
+            x: pointer.x - mousePointTo.x * scale,
+            y: pointer.y - mousePointTo.y * scale
+          };
+          stage.position(newPos);
+        });
+        
+        stage.draggable(true);
+      }
+
+      async function apiRequest(path, options = {}) {
+        if (!authToken) {
+          console.warn('Missing auth token for floor plan API call');
+        }
+        const headers = Object.assign({
+          'Content-Type': 'application/json'
+        }, options.headers || {});
+        if (authToken) {
+          headers['Authorization'] = authToken.startsWith('Bearer ') ? authToken : `Bearer ${authToken}`;
+        }
+        const response = await fetch(`${apiBase}${path}`, {
+          ...options,
+          headers
+        });
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(`API ${response.status}: ${text}`);
+        }
+        return response.json();
+      }
+
+      function queueUpdate(node) {
+        const nodeId = node._id;
+        if (pendingUpdates.has(nodeId)) {
+          clearTimeout(pendingUpdates.get(nodeId));
+        }
+        const timeout = setTimeout(() => {
+          pendingUpdates.delete(nodeId);
+          markUpdate(node);
+        }, 300);
+        pendingUpdates.set(nodeId, timeout);
+      }
+
+      function setSaveButtonState(isDirty, isSaving) {
+        const saveButton = document.getElementById('save-button');
+        if (!saveButton) return;
+        if (isSaving) {
+          saveButton.disabled = true;
+          saveButton.textContent = 'Saving...';
+          return;
+        }
+        saveButton.disabled = !isDirty;
+        saveButton.textContent = 'Save';
+      }
+
+      function markDirty() {
+        hasUnsavedChanges = true;
+        setSaveButtonState(true, false);
+      }
+
+      function markCreate(node) {
+        if (!node) return;
+        pendingCreates.add(node);
+        pendingUpdateNodes.delete(node);
+        pendingDeletes.delete(node);
+        markDirty();
+      }
+
+      function markUpdate(node) {
+        if (!node) return;
+        if (pendingCreates.has(node)) {
+          markDirty();
+          return;
+        }
+        pendingUpdateNodes.add(node);
+        pendingDeletes.delete(node);
+        markDirty();
+      }
+
+      function markDelete(node) {
+        if (!node) return;
+        if (pendingCreates.has(node)) {
+          pendingCreates.delete(node);
+          pendingUpdateNodes.delete(node);
+          markDirty();
+          return;
+        }
+        pendingDeletes.add(node);
+        markDirty();
+      }
+
+      async function saveAllChanges() {
+        if (!hasUnsavedChanges) return;
+        if (!authToken) {
+          alert('Missing auth token. Please open with ?auth_token=YOUR_JWT');
+          return;
+        }
+        setSaveButtonState(true, true);
+        try {
+          const createList = Array.from(pendingCreates).filter(node => {
+            if (!node) return false;
+            if (typeof node.isDestroyed === 'function') return !node.isDestroyed();
+            return !node._destroyed;
+          });
+          for (const node of createList) {
+            await persistCreateNode(node, { x: node.x(), y: node.y() });
+          }
+
+          const updateList = Array.from(pendingUpdateNodes).filter(node => {
+            if (!node) return false;
+            if (typeof node.isDestroyed === 'function' && node.isDestroyed()) return false;
+            if (node._destroyed) return false;
+            return !!node.getAttr('serverId');
+          });
+          for (const node of updateList) {
+            await persistUpdateNode(node);
+          }
+
+          const deleteList = Array.from(pendingDeletes).filter(node => node && node.getAttr('serverId'));
+          for (const node of deleteList) {
+            await persistDeleteNode(node);
+          }
+
+          pendingCreates.clear();
+          pendingUpdateNodes.clear();
+          pendingDeletes.clear();
+          hasUnsavedChanges = false;
+          setSaveButtonState(false, false);
+          if (layer) {
+            layer.draw();
+          }
+        } catch (error) {
+          console.error('Save failed:', error);
+          setSaveButtonState(true, false);
+        }
+      }
+
+      async function ensureDefaultZoneId(x, y) {
+        if (defaultZoneId) return defaultZoneId;
+        const zonePayload = {
+          zone: {
+            name: 'Main Area',
+            zone_type: 'other',
+            color: '#e5e7eb',
+            is_active: true,
+            is_bookable: true,
+            geometry: {
+              type: 'rect',
+              x: Math.max(0, x - 150),
+              y: Math.max(0, y - 100),
+              width: 300,
+              height: 200
+            }
+          }
+        };
+        try {
+          const response = await apiRequest('/zones', {
+            method: 'POST',
+            body: JSON.stringify(zonePayload)
+          });
+          defaultZoneId = response?.data?.zone?.id || response?.zone?.id;
+          return defaultZoneId;
+        } catch (error) {
+          console.error('Failed to create default zone:', error);
+          return null;
+        }
+      }
+
+      function getNodeBoundingRect(node) {
+        const box = node.getClientRect();
+        return { x: box.x, y: box.y, width: box.width, height: box.height };
+      }
+
+      function getLinePointsAbsolute(lineNode) {
+        const points = lineNode.points();
+        const transform = lineNode.getAbsoluteTransform();
+        const absolutePoints = [];
+        for (let i = 0; i < points.length; i += 2) {
+          const point = transform.point({ x: points[i], y: points[i + 1] });
+          absolutePoints.push([point.x, point.y]);
+        }
+        return absolutePoints;
+      }
+
+      function buildZonePayload(node) {
+        const box = getNodeBoundingRect(node);
+        return {
+          zone: {
+            name: node.getAttr('displayName') || 'Zone',
+            zone_type: node.getAttr('zoneType') || 'other',
+            color: node.getAttr('displayColor') || '#e5e7eb',
+            is_active: true,
+            is_bookable: true,
+            geometry: {
+              type: 'rect',
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height
+            }
+          }
+        };
+      }
+
+      function buildTablePayload(node) {
+        const box = getNodeBoundingRect(node);
+        const shape = node.getAttr('tableShape') || 'rectangle';
+        const tableNumber = node.getAttr('tableNumber') || `T-${Date.now().toString().slice(-6)}`;
+        node.setAttr('tableNumber', tableNumber);
+        return {
+          table: {
+            table_number: tableNumber,
+            table_name: node.getAttr('displayName') || null,
+            table_type: 'standard',
+            shape,
+            x_position: node.x(),
+            y_position: node.y(),
+            width: box.width,
+            height: box.height,
+            rotation: node.rotation() || 0,
+            min_capacity: 2,
+            max_capacity: 4,
+            is_accessible: false,
+            is_active: true,
+            is_bookable: true,
+            color: node.getAttr('displayColor') || '#9ca3af',
+            custom_properties: {}
+          }
+        };
+      }
+
+      function buildElementPayload(node) {
+        const elementType = node.getAttr('elementType') || 'other';
+        const color = node.getAttr('displayColor') || '#111827';
+        let geometry = {};
+        let properties = node.getAttr('properties') || {};
+
+        if (elementType === 'wall') {
+          const line = node.getClassName() === 'Group' ? node.findOne('.shape') : node;
+          geometry = { type: 'line', points: getLinePointsAbsolute(line) };
+        } else if (elementType === 'other' && node.getClassName() === 'Text') {
+          geometry = { type: 'point', x: node.x(), y: node.y() };
+          properties = { ...properties, text: node.text(), font_size: node.fontSize() };
+        } else {
+          const box = getNodeBoundingRect(node);
+          geometry = { type: 'rect', x: box.x, y: box.y, width: box.width, height: box.height };
+        }
+
+        return {
+          element: {
+            element_type: elementType,
+            name: node.getAttr('displayName') || null,
+            color,
+            rotation: node.rotation() || 0,
+            is_visible: true,
+            geometry,
+            properties
+          }
+        };
+      }
+
+      async function persistCreateNode(node, originPoint = null) {
+        const persistType = node.getAttr('persistType');
+        try {
+          if (persistType === 'zone') {
+            const response = await apiRequest('/zones', {
+              method: 'POST',
+              body: JSON.stringify(buildZonePayload(node))
+            });
+            const zoneId = response?.data?.zone?.id || response?.zone?.id;
+            node.setAttr('serverId', zoneId);
+            if (!defaultZoneId) defaultZoneId = zoneId;
+          } else if (persistType === 'table') {
+            const zoneId = await ensureDefaultZoneId(originPoint?.x || node.x(), originPoint?.y || node.y());
+            if (!zoneId) return;
+            const response = await apiRequest(`/zones/${zoneId}/tables`, {
+              method: 'POST',
+              body: JSON.stringify(buildTablePayload(node))
+            });
+            const tableId = response?.data?.table?.id || response?.table?.id;
+            node.setAttr('serverId', tableId);
+          } else if (persistType === 'element') {
+            const response = await apiRequest('/elements', {
+              method: 'POST',
+              body: JSON.stringify(buildElementPayload(node))
+            });
+            const elementId = response?.data?.element?.id || response?.element?.id;
+            node.setAttr('serverId', elementId);
+          }
+        } catch (error) {
+          console.error('Persist create failed:', error);
+        }
+      }
+
+      async function persistUpdateNode(node) {
+        const persistType = node.getAttr('persistType');
+        const serverId = node.getAttr('serverId');
+        if (!persistType || !serverId) return;
+        try {
+          if (persistType === 'zone') {
+            await apiRequest(`/zones/${serverId}`, {
+              method: 'PATCH',
+              body: JSON.stringify(buildZonePayload(node))
+            });
+          } else if (persistType === 'table') {
+            await apiRequest(`/tables/${serverId}`, {
+              method: 'PATCH',
+              body: JSON.stringify(buildTablePayload(node))
+            });
+          } else if (persistType === 'element') {
+            await apiRequest(`/elements/${serverId}`, {
+              method: 'PATCH',
+              body: JSON.stringify(buildElementPayload(node))
+            });
+          }
+        } catch (error) {
+          console.error('Persist update failed:', error);
+        }
+      }
+
+      async function persistDeleteNode(node) {
+        const persistType = node.getAttr('persistType');
+        const serverId = node.getAttr('serverId');
+        if (!persistType || !serverId) return;
+        try {
+          if (persistType === 'zone') {
+            await apiRequest(`/zones/${serverId}`, { method: 'DELETE' });
+          } else if (persistType === 'table') {
+            await apiRequest(`/tables/${serverId}`, { method: 'DELETE' });
+          } else if (persistType === 'element') {
+            await apiRequest(`/elements/${serverId}`, { method: 'DELETE' });
+          }
+        } catch (error) {
+          console.error('Persist delete failed:', error);
+        }
+      }
+
+      function setupIconPanel() {
+        const panel = document.getElementById('icon-panel');
+        if (!panel) return;
+        panel.querySelectorAll('.icon-button').forEach(button => {
+          button.addEventListener('click', () => {
+            currentIcon = button.getAttribute('data-icon');
+            const toolbarButtons = document.querySelectorAll('#toolbar .tool-button[data-tool]');
+            toolbarButtons.forEach(b => b.classList.remove('active'));
+            const iconTool = document.querySelector('#toolbar .tool-button[data-tool="icon"]');
+            if (iconTool) iconTool.classList.add('active');
+            currentTool = 'icon';
+            stage.draggable(false);
+            toggleOptionPanel(false);
+          });
+        });
+      }
+
+      function setupOptionPanel() {
+        const panel = document.getElementById('option-panel');
+        if (!panel) return;
+        panel.querySelectorAll('.option-button').forEach(button => {
+          button.addEventListener('click', () => {
+            const option = button.getAttribute('data-option');
+            const tool = button.getAttribute('data-tool');
+            if (!tool || !option) return;
+            currentShapeOption[tool] = option;
+            updateOptionPanel(tool);
+          });
+        });
+      }
+
+      function setupSelectionPanel() {
+        const panel = document.getElementById('selection-panel');
+        const nameInput = document.getElementById('selection-name');
+        const colorInput = document.getElementById('selection-color');
+        const deleteBtn = document.getElementById('selection-delete');
+        if (!panel || !nameInput || !colorInput || !deleteBtn) return;
+
+        nameInput.addEventListener('input', () => {
+          const target = hoveredNode || selectedNode;
+          if (!target) return;
+          setNodeName(target, nameInput.value);
+        });
+
+        nameInput.addEventListener('blur', () => {
+          const target = hoveredNode || selectedNode;
+          if (!target) return;
+          setNodeName(target, nameInput.value);
+        });
+
+        colorInput.addEventListener('input', () => {
+          const target = hoveredNode || selectedNode;
+          if (!target) return;
+          applyNodeColor(target, colorInput.value);
+        });
+
+        deleteBtn.addEventListener('click', () => {
+          const target = hoveredNode || selectedNode;
+          if (!target) return;
+          deleteNode(target);
+        });
+      }
+
+      function setupToolbar() {
+        const toolbar = document.getElementById('toolbar');
+        if (!toolbar) return;
+        const buttons = toolbar.querySelectorAll('.tool-button[data-tool]');
+        buttons.forEach(button => {
+          button.addEventListener('click', () => {
+            const tool = button.getAttribute('data-tool');
+            const isActive = button.classList.contains('active');
+            buttons.forEach(b => b.classList.remove('active'));
+            if (isActive) {
+              currentTool = null;
+              currentIcon = null;
+              stage.draggable(true);
+              toggleIconPanel(false);
+              toggleOptionPanel(false);
+              return;
+            }
+            button.classList.add('active');
+            currentTool = tool;
+            if (tool !== 'icon') {
+              currentIcon = null;
+              toggleIconPanel(false);
+            } else {
+              toggleIconPanel(true);
+            }
+            updateOptionPanel(tool);
+            if (tool === 'text' || tool === 'icon') {
+              toggleOptionPanel(false);
+            } else {
+              toggleOptionPanel(true);
+            }
+            stage.draggable(false);
+          });
+        });
+
+        document.addEventListener('keydown', (event) => {
+          if (event.key === 'Escape') {
+            currentTool = null;
+            currentIcon = null;
+            buttons.forEach(b => b.classList.remove('active'));
+            toggleIconPanel(false);
+            toggleOptionPanel(false);
+            if (stage) stage.draggable(true);
+          }
+        });
+      }
+
+      function setupSaveButton() {
+        const saveButton = document.getElementById('save-button');
+        if (!saveButton) return;
+        saveButton.addEventListener('click', async () => {
+          await saveAllChanges();
+        });
+      }
+
+      function toggleIconPanel(show) {
+        const panel = document.getElementById('icon-panel');
+        if (!panel) return;
+        panel.classList.toggle('active', !!show);
+      }
+
+      function toggleOptionPanel(show) {
+        const panel = document.getElementById('option-panel');
+        if (!panel) return;
+        panel.classList.toggle('active', !!show);
+      }
+
+      function updateOptionPanel(tool) {
+        const panel = document.getElementById('option-panel');
+        if (!panel) return;
+        panel.querySelectorAll('.option-button').forEach(button => {
+          const buttonTool = button.getAttribute('data-tool');
+          const option = button.getAttribute('data-option');
+          const isVisible = buttonTool === tool;
+          button.style.display = isVisible ? 'inline-flex' : 'none';
+          if (isVisible) {
+            const active = currentShapeOption[tool] === option;
+            button.classList.toggle('active', active);
+          } else {
+            button.classList.remove('active');
+          }
+        });
+      }
+
+      function getStagePointerPosition() {
+        const pointer = stage.getPointerPosition();
+        if (!pointer) return null;
+        const transform = stage.getAbsoluteTransform().copy();
+        transform.invert();
+        return transform.point(pointer);
+      }
+
+      function enablePlacement() {
+        stage.on('mousedown touchstart', function(e) {
+          if (!currentTool) return;
+          if (e.target && e.target !== stage) return;
+          const pos = getStagePointerPosition();
+          if (!pos) return;
+          if (currentTool === 'table') addTable(pos.x, pos.y, currentShapeOption.table);
+          if (currentTool === 'chair') addChair(pos.x, pos.y, currentShapeOption.chair);
+          if (currentTool === 'zone') addZone(pos.x, pos.y, currentShapeOption.zone);
+          if (currentTool === 'wall') addWall(pos.x, pos.y, currentShapeOption.wall);
+          if (currentTool === 'text') addText(pos.x, pos.y);
+          if (currentTool === 'icon') addIcon(pos.x, pos.y, currentIcon);
+          layer.draw();
+        });
+      }
+
+      function enableSelection() {
+        transformer = new Konva.Transformer({
+          rotateEnabled: true,
+          keepRatio: false,
+          enabledAnchors: [
+            'top-left', 'top-right', 'bottom-left', 'bottom-right',
+            'middle-left', 'middle-right', 'top-center', 'bottom-center'
+          ],
+          boundBoxFunc: (oldBox, newBox) => {
+            if (newBox.width < 20 || newBox.height < 20) {
+              return oldBox;
+            }
+            return newBox;
+          }
+        });
+        layer.add(transformer);
+        setupSelectionPanel();
+
+        stage.on('mousemove touchmove', (e) => {
+          const targetNode = resolveSelectableTarget(e.target);
+          if (targetNode !== hoveredNode) {
+            hoveredNode = targetNode;
+            if (targetNode) {
+              updateSelectionPanel(targetNode);
+              positionSelectionPanel(targetNode);
+              if (!currentTool) stage.draggable(false);
+            } else if (!selectedNode) {
+              toggleSelectionPanel(false);
+              if (!currentTool) stage.draggable(true);
+            }
+          }
+        });
+
+        stage.on('mouseleave', () => {
+          hoveredNode = null;
+          if (!selectedNode) {
+            toggleSelectionPanel(false);
+            if (!currentTool) stage.draggable(true);
+          }
+        });
+
+        stage.on('click tap', (e) => {
+          if (e.target === stage) {
+            transformer.nodes([]);
+            selectedNode = null;
+            toggleSelectionPanel(false);
+            if (!currentTool) stage.draggable(true);
+            layer.draw();
+            return;
+          }
+          const targetNode = resolveSelectableTarget(e.target);
+          if (!targetNode) return;
+          configureTransformerForNode(targetNode);
+          transformer.nodes([targetNode]);
+          selectedNode = targetNode;
+          updateSelectionPanel(targetNode);
+          if (!currentTool) stage.draggable(false);
+          layer.draw();
+        });
+
+        window.addEventListener('keydown', (event) => {
+          if (event.key === 'Delete' || event.key === 'Backspace') {
+            const target = hoveredNode || selectedNode;
+            if (!target) return;
+            deleteNode(target);
+          }
+        });
+      }
+
+      function toggleSelectionPanel(show) {
+        const panel = document.getElementById('selection-panel');
+        if (!panel) return;
+        panel.classList.toggle('active', !!show);
+      }
+
+      function updateSelectionPanel(node) {
+        const panel = document.getElementById('selection-panel');
+        const nameInput = document.getElementById('selection-name');
+        const colorInput = document.getElementById('selection-color');
+        if (!panel || !nameInput || !colorInput) return;
+        let displayName = node.getAttr('displayName') || '';
+        if (!displayName && node.getClassName() === 'Text') {
+          displayName = node.text();
+        }
+        nameInput.value = displayName;
+        let currentColor = node.getAttr('displayColor');
+        if (!currentColor && node.getClassName() === 'Text') {
+          currentColor = node.fill();
+        }
+        if (!currentColor && node.getClassName() === 'Line') {
+          currentColor = node.stroke();
+        }
+        currentColor = currentColor || '#9ca3af';
+        colorInput.value = currentColor;
+        positionSelectionPanel(node);
+        toggleSelectionPanel(true);
+      }
+
+      function resolveSelectableTarget(target) {
+        if (!target || target === stage) return null;
+        const selectableRoot = target.getAttr && target.getAttr('selectableRoot');
+        if (selectableRoot) return selectableRoot;
+        const isSelectable = target.getAttr && target.getAttr('selectable');
+        if (isSelectable) return target;
+        const parent = target.getParent && target.getParent();
+        if (parent && parent.getAttr && parent.getAttr('selectable')) return parent;
+        return null;
+      }
+
+      function configureTransformerForNode(node) {
+        if (!transformer) return;
+        const isWall = node.getAttr('shapeType') === 'wall';
+        if (isWall) {
+          transformer.enabledAnchors([]);
+          transformer.rotateEnabled(true);
+        } else {
+          transformer.enabledAnchors([
+            'top-left', 'top-right', 'bottom-left', 'bottom-right',
+            'middle-left', 'middle-right', 'top-center', 'bottom-center'
+          ]);
+          transformer.rotateEnabled(true);
+        }
+      }
+
+      function positionSelectionPanel(node) {
+        const panel = document.getElementById('selection-panel');
+        if (!panel || !stage) return;
+        const box = node.getClientRect();
+        const stageRect = stage.container().getBoundingClientRect();
+        const container = document.getElementById('container');
+        const containerRect = container.getBoundingClientRect();
+
+        const panelWidth = panel.offsetWidth || 220;
+        const panelHeight = panel.offsetHeight || 44;
+
+        const preferredLeft = stageRect.left + box.x + box.width + 12;
+        const preferredTop = stageRect.top + box.y;
+
+        let left = preferredLeft;
+        let top = preferredTop;
+
+        if (left + panelWidth > containerRect.right - 8) {
+          left = stageRect.left + box.x - panelWidth - 12;
+        }
+        if (left < containerRect.left + 8) {
+          left = containerRect.left + 8;
+        }
+        if (top + panelHeight > containerRect.bottom - 8) {
+          top = containerRect.bottom - panelHeight - 8;
+        }
+        if (top < containerRect.top + 8) {
+          top = containerRect.top + 8;
+        }
+
+        panel.style.left = `${Math.round(left)}px`;
+        panel.style.top = `${Math.round(top)}px`;
+      }
+
+      function setNodeName(node, name) {
+        const trimmed = name ? name.trim() : '';
+        node.setAttr('displayName', trimmed);
+        if (node.getClassName() === 'Text') {
+          node.text(trimmed);
+        } else {
+          const label = getOrCreateLabel(node);
+          if (!trimmed) {
+            label.text('');
+            label.visible(false);
+          } else {
+            label.text(trimmed);
+            label.visible(true);
+          }
+          positionLabel(node, label);
+        }
+        layer.draw();
+        queueUpdate(node);
+      }
+
+      function applyNodeColor(node, color) {
+        node.setAttr('displayColor', color);
+        if (node.getClassName() === 'Group') {
+          const shape = node.findOne('.shape');
+          const icon = node.findOne('.icon');
+          if (shape) {
+            if (shape.getClassName() === 'Line') {
+              shape.stroke(color);
+            } else {
+              shape.fill(color);
+            }
+          }
+          if (icon) {
+            icon.fill(color);
+          }
+          const label = node.getAttr('nameLabel');
+          if (label) label.fill('#111827');
+        } else if (node.getClassName() === 'Line') {
+          node.stroke(color);
+        } else if (node.getClassName() === 'Text') {
+          node.fill(color);
+        } else {
+          node.fill(color);
+        }
+        layer.draw();
+        queueUpdate(node);
+      }
+
+      function getOrCreateLabel(node) {
+        let label = node.getAttr('nameLabel');
+        if (label && label.getLayer()) return label;
+        label = new Konva.Text({
+          text: '',
+          fontSize: 12,
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont',
+          fill: '#111827',
+          align: 'center',
+          verticalAlign: 'middle',
+          listening: false,
+          visible: false
+        });
+        node.setAttr('nameLabel', label);
+        layer.add(label);
+        return label;
+      }
+
+      function positionLabel(node, label) {
+        const box = node.getClientRect({ relativeTo: layer });
+        label.x(box.x + box.width / 2 - label.width() / 2);
+        label.y(box.y + box.height + 6);
+      }
+
+      function attachNodeEvents(node) {
+        node.on('mouseenter', () => {
+          hoveredNode = node;
+          updateSelectionPanel(node);
+          positionSelectionPanel(node);
+        });
+
+        node.on('mouseleave', () => {
+          if (hoveredNode === node) hoveredNode = null;
+          if (selectedNode) {
+            updateSelectionPanel(selectedNode);
+            positionSelectionPanel(selectedNode);
+          } else {
+            toggleSelectionPanel(false);
+          }
+        });
+
+        node.on('dragmove transform', () => {
+          const label = node.getAttr('nameLabel');
+          if (label) {
+            positionLabel(node, label);
+          }
+          if (selectedNode === node || hoveredNode === node) {
+            positionSelectionPanel(node);
+          }
+        });
+
+        node.on('dragstart', () => {
+          stage.draggable(false);
+        });
+
+        node.on('dragend transformend', () => {
+          queueUpdate(node);
+          if (!currentTool && !selectedNode && !hoveredNode) {
+            stage.draggable(true);
+          }
+        });
+      }
+
+      function deleteNode(node) {
+        if (!node) return;
+        const label = node.getAttr('nameLabel');
+        if (label) label.destroy();
+        node.destroy();
+        transformer.nodes([]);
+        if (selectedNode === node) selectedNode = null;
+        if (hoveredNode === node) hoveredNode = null;
+        toggleSelectionPanel(false);
+        layer.draw();
+        markDelete(node);
+      }
+
+      function addTable(x, y, shape = 'rectangle') {
+        const width = shape === 'square' ? 70 : 80;
+        const height = shape === 'square' ? 70 : 60;
+        const group = new Konva.Group({
+          x,
+          y,
+          draggable: true,
+          selectable: true,
+          displayColor: '#9ca3af',
+          displayName: '',
+          shapeType: 'table',
+          tableShape: shape,
+          persistType: 'table'
+        });
+        let table;
+        if (shape === 'circle') {
+          table = new Konva.Circle({
+            x: 0,
+            y: 0,
+            radius: width / 2,
+            fill: '#9ca3af',
+            stroke: '#4b5563',
+            strokeWidth: 2,
+            name: 'shape',
+            listening: true,
+            selectable: true
+          });
+        } else if (shape === 'oval') {
+          table = new Konva.Ellipse({
+            x: 0,
+            y: 0,
+            radiusX: width / 2,
+            radiusY: height / 2,
+            fill: '#9ca3af',
+            stroke: '#4b5563',
+            strokeWidth: 2,
+            name: 'shape',
+            listening: true,
+            selectable: true
+          });
+        } else {
+          table = new Konva.Rect({
+            x: -width / 2,
+            y: -height / 2,
+            width,
+            height,
+            fill: '#9ca3af',
+            stroke: '#4b5563',
+            strokeWidth: 2,
+            cornerRadius: shape === 'square' ? 10 : 6,
+            name: 'shape',
+            listening: true,
+            selectable: true
+          });
+        }
+        table.setAttr('selectableRoot', group);
+        group.add(table);
+        layer.add(group);
+        attachNodeEvents(group);
+        markCreate(group);
+        notifyToolUsed('table', { x, y, width, height, shape });
+      }
+
+      function addChair(x, y, shape = 'circle') {
+        const group = new Konva.Group({
+          x,
+          y,
+          draggable: true,
+          selectable: true,
+          displayColor: '#0ea5e9',
+          displayName: '',
+          shapeType: 'chair',
+          chairShape: shape,
+          persistType: 'element',
+          elementType: 'decor',
+          properties: { kind: 'chair', shape }
+        });
+        let chair;
+        if (shape === 'square') {
+          chair = new Konva.Rect({
+            x: -8,
+            y: -8,
+            width: 16,
+            height: 16,
+            fill: '#0ea5e9',
+            stroke: '#1f2937',
+            strokeWidth: 1,
+            cornerRadius: 3,
+            name: 'shape',
+            listening: true,
+            selectable: true
+          });
+        } else {
+          chair = new Konva.Circle({
+            x: 0,
+            y: 0,
+            radius: 8,
+            fill: '#0ea5e9',
+            stroke: '#1f2937',
+            strokeWidth: 1,
+            name: 'shape',
+            listening: true,
+            selectable: true
+          });
+        }
+        chair.setAttr('selectableRoot', group);
+        group.add(chair);
+        layer.add(group);
+        attachNodeEvents(group);
+        markCreate(group);
+        notifyToolUsed('chair', { x, y, shape });
+      }
+
+      function addZone(x, y, shape = 'rectangle') {
+        const width = shape === 'square' ? 160 : 200;
+        const height = shape === 'square' ? 160 : 140;
+        const group = new Konva.Group({
+          x,
+          y,
+          draggable: true,
+          selectable: true,
+          displayColor: '#e5e7eb',
+          displayName: '',
+          shapeType: 'zone',
+          zoneType: 'other',
+          persistType: 'zone'
+        });
+        const zone = new Konva.Rect({
+          x: -width / 2,
+          y: -height / 2,
+          width,
+          height,
+          fill: '#e5e7eb',
+          stroke: '#6b7280',
+          strokeWidth: 1.25,
+          opacity: 0.3,
+          name: 'shape',
+          listening: true,
+          selectable: true
+        });
+        zone.setAttr('selectableRoot', group);
+        group.add(zone);
+        layer.add(group);
+        attachNodeEvents(group);
+        markCreate(group);
+        notifyToolUsed('zone', { x, y, width, height, shape });
+      }
+
+      function addWall(x, y, orientation = 'horizontal') {
+        const group = new Konva.Group({
+          x,
+          y,
+          draggable: true,
+          selectable: true,
+          displayColor: '#111827',
+          displayName: '',
+          shapeType: 'wall',
+          persistType: 'element',
+          elementType: 'wall'
+        });
+        const wall = new Konva.Line({
+          points: orientation === 'vertical' ? [0, -60, 0, 60] : [-60, 0, 60, 0],
+          stroke: '#111827',
+          strokeWidth: 4,
+          lineCap: 'round',
+          lineJoin: 'round',
+          name: 'shape',
+          listening: true,
+          selectable: true
+        });
+        wall.setAttr('selectableRoot', group);
+        group.add(wall);
+        layer.add(group);
+        attachNodeEvents(group);
+        markCreate(group);
+        notifyToolUsed('wall', { x, y, length: 120, orientation });
+      }
+
+      function addText(x, y) {
+        const text = new Konva.Text({
+          x,
+          y,
+          text: 'Text',
+          fontSize: 14,
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont',
+          fill: '#111827',
+          draggable: true,
+          selectable: true,
+          displayColor: '#111827',
+          displayName: 'Text',
+          persistType: 'element',
+          elementType: 'other'
+        });
+        text.on('dblclick dbltap', () => {
+          const value = window.prompt('Text', text.text());
+          if (value !== null && value.trim() !== '') {
+            text.text(value.trim());
+            layer.draw();
+            notifyToolUsed('text', { value: text.text() });
+          }
+        });
+        layer.add(text);
+        attachNodeEvents(text);
+        markCreate(text);
+        notifyToolUsed('text', { x, y, value: 'Text' });
+      }
+
+      function addIcon(x, y, iconType) {
+        if (!iconType) return;
+        const iconMap = {
+          bar: { unicode: '\uf4e3', color: '#111827' },
+          kitchen: { unicode: '\uf2e7', color: '#111827' },
+          restroom: { unicode: '\uf7bd', color: '#111827' },
+          stage: { unicode: '\uf001', color: '#111827' },
+          exit: { unicode: '\uf52b', color: '#111827' },
+          entrance: { unicode: '\uf52a', color: '#111827' }
+        };
+        const iconInfo = iconMap[iconType] || { unicode: '\uf111', color: '#111827' };
+        const renderIcon = () => {
+          const iconGroup = new Konva.Group({
+            x,
+            y,
+            draggable: true,
+            selectable: true,
+            displayColor: iconInfo.color,
+            displayName: iconType,
+            persistType: 'element',
+            elementType: iconType
+          });
+          const box = new Konva.Rect({
+            x: -18,
+            y: -18,
+            width: 36,
+            height: 36,
+            fill: '#ffffff',
+            stroke: '#111827',
+            strokeWidth: 1,
+            cornerRadius: 8,
+            name: 'shape',
+            selectable: true
+          });
+          const icon = new Konva.Text({
+            x: -10,
+            y: -12,
+            width: 20,
+            text: iconInfo.unicode,
+            fontSize: 16,
+            fontFamily: 'Font Awesome 6 Free',
+            fontStyle: '900',
+            fill: iconInfo.color,
+            align: 'center',
+            name: 'icon',
+            selectable: true
+          });
+          box.setAttr('selectableRoot', iconGroup);
+          icon.setAttr('selectableRoot', iconGroup);
+          iconGroup.add(box);
+          iconGroup.add(icon);
+          layer.add(iconGroup);
+          attachNodeEvents(iconGroup);
+          markCreate(iconGroup);
+          notifyToolUsed('icon', { x, y, icon: iconType });
+          layer.draw();
+        };
+
+        if (document.fonts && document.fonts.load) {
+          document.fonts.load('900 16px "Font Awesome 6 Free"').then(renderIcon);
+        } else {
+          renderIcon();
+        }
+      }
+
+      function notifyToolUsed(tool, payload) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'floor_plan_add',
+            tool,
+            payload
+          }));
+        }
+      }
+      
+      function getDistance(p1, p2) {
+        return Math.sqrt(
+          Math.pow(p2.clientX - p1.clientX, 2) +
+          Math.pow(p2.clientY - p1.clientY, 2)
+        );
+      }
+      
+      function getCenter(p1, p2) {
+        return {
+          x: (p1.clientX + p2.clientX) / 2,
+          y: (p1.clientY + p2.clientY) / 2
+        };
+      }
+      
+      function renderZones() {
+        if (!canvasData.zones || canvasData.zones.length === 0) {
+          console.log('No zones to render');
+          return;
+        }
+        
+        console.log('Rendering', canvasData.zones.length, 'zones');
+        canvasData.zones.forEach((zone, index) => {
+          if (!zone.geometry) {
+            console.warn('Zone', index, 'has no geometry');
+            return;
+          }
+          
+          let zoneShape;
+          const color = zone.color || '#e5e7eb';
+          
+          if (zone.geometry.type === 'polygon' && zone.geometry.points) {
+            const points = [];
+            zone.geometry.points.forEach(point => {
+              const x = point[0] || point.x || 0;
+              const y = point[1] || point.y || 0;
+              points.push(x, y);
+            });
+            
+            zoneShape = new Konva.Line({
+              points,
+              closed: true,
+              fill: color,
+              stroke: '#6b7280',
+              strokeWidth: 1.25,
+              opacity: 0.3,
+              listening: true,
+              draggable: true
+            });
+          } else if (zone.geometry.type === 'rect' || zone.geometry.type === 'rectangle') {
+            zoneShape = new Konva.Rect({
+              x: zone.geometry.x || 0,
+              y: zone.geometry.y || 0,
+              width: zone.geometry.width || 100,
+              height: zone.geometry.height || 100,
+              fill: color,
+              stroke: '#6b7280',
+              strokeWidth: 1.25,
+              opacity: 0.3,
+              listening: true,
+              draggable: true
+            });
+          } else if (zone.geometry.type === 'circle') {
+            zoneShape = new Konva.Circle({
+              x: zone.geometry.x || 0,
+              y: zone.geometry.y || 0,
+              radius: zone.geometry.radius || 50,
+              fill: color,
+              stroke: '#6b7280',
+              strokeWidth: 1.25,
+              opacity: 0.3,
+              listening: true,
+              draggable: true
+            });
+          }
+          
+          if (zoneShape) {
+            zoneShape.setAttr('selectable', true);
+            zoneShape.setAttr('persistType', 'zone');
+            zoneShape.setAttr('serverId', zone.id);
+            zoneShape.setAttr('displayName', zone.name || '');
+            zoneShape.setAttr('displayColor', zone.color || '#e5e7eb');
+            zoneShape.setAttr('zoneType', zone.zone_type || 'other');
+            attachNodeEvents(zoneShape);
+            layer.add(zoneShape);
+            setNodeName(zoneShape, zone.name || '');
+          }
+        });
+      }
+      
+      function renderElements() {
+        if (!canvasData.elements || canvasData.elements.length === 0) {
+          console.log('No elements to render');
+          return;
+        }
+        
+        console.log('Rendering', canvasData.elements.length, 'elements');
+        canvasData.elements.forEach((element, index) => {
+          if (!element.is_visible || !element.geometry) {
+            console.log('Skipping element', index, '- not visible or no geometry');
+            return;
+          }
+          
+          let elementShape;
+          const baseColor = element.color || '#111827';
+          
+          if (element.element_type === 'wall' && element.geometry.points) {
+            const p = element.geometry.points;
+            if (p.length >= 2) {
+              elementShape = new Konva.Line({
+                points: [
+                  p[0][0] || p[0].x || 0,
+                  p[0][1] || p[0].y || 0,
+                  p[1][0] || p[1].x || 0,
+                  p[1][1] || p[1].y || 0
+                ],
+                stroke: baseColor,
+                strokeWidth: 4,
+                lineCap: 'round',
+                lineJoin: 'round',
+                opacity: 0.85,
+                listening: true,
+                draggable: true
+              });
+            }
+          } else if (element.element_type === 'door' && element.geometry.points) {
+            const p = element.geometry.points;
+            if (p.length >= 2) {
+              elementShape = new Konva.Line({
+                points: [
+                  p[0][0] || p[0].x || 0,
+                  p[0][1] || p[0].y || 0,
+                  p[1][0] || p[1].x || 0,
+                  p[1][1] || p[1].y || 0
+                ],
+                stroke: '#f59e0b',
+                strokeWidth: 3,
+                dash: [6, 4],
+                listening: true,
+                draggable: true
+              });
+            }
+          } else if (element.element_type === 'window' && element.geometry.points) {
+            const p = element.geometry.points;
+            if (p.length >= 2) {
+              elementShape = new Konva.Line({
+                points: [
+                  p[0][0] || p[0].x || 0,
+                  p[0][1] || p[0].y || 0,
+                  p[1][0] || p[1].x || 0,
+                  p[1][1] || p[1].y || 0
+                ],
+                stroke: '#0ea5e9',
+                strokeWidth: 3,
+                dash: [8, 5],
+                listening: true,
+                draggable: true
+              });
+            }
+          }
+          
+          if (elementShape) {
+            if (element.rotation) {
+              elementShape.rotation(element.rotation);
+            }
+            elementShape.setAttr('selectable', true);
+            elementShape.setAttr('persistType', 'element');
+            elementShape.setAttr('serverId', element.id);
+            elementShape.setAttr('displayName', element.name || '');
+            elementShape.setAttr('displayColor', element.color || '#111827');
+            elementShape.setAttr('elementType', element.element_type || 'other');
+            elementShape.setAttr('properties', element.properties || {});
+            attachNodeEvents(elementShape);
+            layer.add(elementShape);
+            setNodeName(elementShape, element.name || '');
+          }
+        });
+      }
+      
+      function renderTables() {
+        if (!canvasData.tables || canvasData.tables.length === 0) {
+          console.log('No tables to render');
+          return;
+        }
+        
+        console.log('Rendering', canvasData.tables.length, 'tables');
+        canvasData.tables.forEach((table, index) => {
+          if (!table.is_active) {
+            console.log('Skipping inactive table', index);
+            return;
+          }
+          
+          let tableShape;
+          const x = table.position.x;
+          const y = table.position.y;
+          const width = table.dimensions.width;
+          const height = table.dimensions.height;
+          
+          const baseColor = table.color || '#9ca3af';
+          const strokeColor = '#4b5563';
+          const group = new Konva.Group({
+            x,
+            y,
+            draggable: true,
+            selectable: true,
+            displayColor: baseColor,
+            displayName: table.table_number || '',
+            persistType: 'table',
+            serverId: table.id,
+            tableShape: table.shape || 'rectangle',
+            tableNumber: table.table_number
+          });
+          
+          if (table.shape === 'circle') {
+            tableShape = new Konva.Circle({
+              x: 0,
+              y: 0,
+              radius: width / 2,
+              fill: baseColor,
+              stroke: strokeColor,
+              strokeWidth: 2,
+              shadowColor: 'rgba(15, 23, 42, 0.2)',
+              shadowBlur: 8,
+              shadowOffset: { x: 0, y: 2 },
+              shadowOpacity: 0.5,
+              name: 'shape',
+              selectable: true
+            });
+          } else if (table.shape === 'rectangle' || table.shape === 'square') {
+            tableShape = new Konva.Rect({
+              x: -width / 2,
+              y: -height / 2,
+              width,
+              height,
+              fill: baseColor,
+              stroke: strokeColor,
+              strokeWidth: 2,
+              cornerRadius: table.shape === 'square' ? 10 : 4,
+              shadowColor: 'rgba(15, 23, 42, 0.2)',
+              shadowBlur: 8,
+              shadowOffset: { x: 0, y: 2 },
+              shadowOpacity: 0.5,
+              name: 'shape',
+              selectable: true
+            });
+          } else if (table.shape === 'oval') {
+            tableShape = new Konva.Ellipse({
+              x: 0,
+              y: 0,
+              radiusX: width / 2,
+              radiusY: height / 2,
+              fill: baseColor,
+              stroke: strokeColor,
+              strokeWidth: 2,
+              shadowColor: 'rgba(15, 23, 42, 0.2)',
+              shadowBlur: 8,
+              shadowOffset: { x: 0, y: 2 },
+              shadowOpacity: 0.5,
+              name: 'shape',
+              selectable: true
+            });
+          }
+          
+          if (tableShape) {
+            if (table.rotation) {
+              tableShape.rotation(table.rotation);
+            }
+            
+            tableShape.on('mouseenter', function() {
+              document.body.style.cursor = 'pointer';
+              this.opacity(0.9);
+              this.scale({ x: 1.04, y: 1.04 });
+              layer.draw();
+            });
+            
+            tableShape.on('mouseleave', function() {
+              document.body.style.cursor = 'default';
+              this.opacity(1);
+              this.scale({ x: 1, y: 1 });
+              layer.draw();
+            });
+            
+            tableShape.on('click tap', function() {
+              if (window.ReactNativeWebView) {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  type: 'table_selected',
+                  table_id: table.id,
+                  table_number: table.table_number
+                }));
+              }
+            });
+            tableShape.setAttr('selectableRoot', group);
+            group.add(tableShape);
+            layer.add(group);
+            attachNodeEvents(group);
+            if (table.table_name) {
+              setNodeName(group, table.table_name);
+            } else {
+              setNodeName(group, '');
+            }
+            
+            if (table.seats && table.seats.length > 0) {
+              table.seats.forEach(seat => {
+                if (!seat.is_active) return;
+                
+                const seatShape = new Konva.Circle({
+                  x: seat.position.x,
+                  y: seat.position.y,
+                  radius: 4,
+                  fill: seat.is_accessible ? '#f59e0b' : '#0ea5e9',
+                  stroke: '#1f2937',
+                  strokeWidth: 1,
+                  listening: false
+                });
+                layer.add(seatShape);
+              });
+            }
+          }
+        });
+      }
+      
+      function handleResize() {
+        const container = document.getElementById('container');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        const scaleX = containerWidth * 0.9 / stageWidth;
+        const scaleY = containerHeight * 0.9 / stageHeight;
+        const newScale = Math.min(scaleX, scaleY, 1);
+        if (stage) {
+          stage.width(stageWidth * newScale);
+          stage.height(stageHeight * newScale);
+          stage.scale({ x: newScale, y: newScale });
+          stage.draw();
+        }
+      }
+      
+        try {
+          console.log('Initializing stage...');
+          initStage();
+          
+          console.log('Rendering zones...');
+          renderZones();
+          
+          console.log('Rendering elements...');
+          renderElements();
+          
+          console.log('Rendering tables...');
+          renderTables();
+          
+          // Draw all layers
+          backgroundLayer.draw();
+          layer.draw();
+          
+          // Hide loading, show canvas
+          const loadingEl = document.getElementById('loading');
+          const containerEl = document.getElementById('floor-plan-container');
+          
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (containerEl) containerEl.style.display = 'block';
+          
+          console.log('Floor plan rendered successfully!');
+          console.log('Zones:', canvasData.zones?.length || 0);
+          console.log('Elements:', canvasData.elements?.length || 0);
+          console.log('Tables:', canvasData.tables?.length || 0);
+          
+          // Show empty state if no content
+          if ((!canvasData.zones || canvasData.zones.length === 0) &&
+              (!canvasData.elements || canvasData.elements.length === 0) &&
+              (!canvasData.tables || canvasData.tables.length === 0)) {
+            const emptyText = new Konva.Text({
+              x: stageWidth / 2,
+              y: stageHeight / 2,
+              text: 'Empty Floor Plan\n\nAdd zones, tables, and elements\nto start designing',
+              fontSize: 16,
+              fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont',
+              fill: 'rgba(55, 65, 81, 0.6)',
+              align: 'center',
+              verticalAlign: 'middle',
+              offsetX: 0,
+              offsetY: 0,
+              listening: false
+            });
+            layer.add(emptyText);
+            layer.draw();
+          }
+          
+          window.addEventListener('resize', handleResize);
+          
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              type: 'floor_plan_loaded',
+              floor_plan_id: canvasData.id,
+              venue_name: venueData.name,
+              status: 'ready',
+              stats: {
+                zones: canvasData.zones?.length || 0,
+                elements: canvasData.elements?.length || 0,
+                tables: canvasData.tables?.length || 0
+              }
+            }));
+          }
+        } catch (error) {
+          console.error('Error rendering floor plan:', error);
+          console.error('Error stack:', error.stack);
+          const loadingEl = document.getElementById('loading');
+          if (loadingEl) {
+            loadingEl.innerHTML =
+              '<div class="error">Error loading floor plan: ' + error.message + '<br><small>Check console for details</small></div>';
+          }
+        }
+      }
+    })();
+  </script>
+</body>
+</html>
+
+

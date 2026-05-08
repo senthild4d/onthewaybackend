@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:18-alpine
+    container_name: vibes_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/backups:/backups
+    environment:
+      POSTGRES_USER: vibes
+      POSTGRES_PASSWORD: vibes@123
+      POSTGRES_DB: vibes_production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vibes"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vibes_network
+
+  # Rails Application
+  web:
+    build: .
+    container_name: vibes_web
+    ports:
+      - "3000:80"
+    env_file:
+      - .env.production
+    environment:
+      DATABASE_URL: postgresql://vibes:${VIBES_DATABASE_PASSWORD}@db:5432/vibes_production
+      RAILS_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: ["./bin/thrust", "./bin/rails", "server"]
+    volumes:
+      - ./log:/rails/log
+      - ./tmp:/rails/tmp
+      - storage_data:/rails/storage
+    networks:
+      - vibes_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/up"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis (Optional - uncomment if needed for caching/background jobs)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: vibes_redis
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+  #   networks:
+  #     - vibes_network
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 3s
+  #     retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
+  storage_data:
+    driver: local
+  # redis_data:
+  #   driver: local
+
+networks:
+  vibes_network:
+    driver: bridge
+

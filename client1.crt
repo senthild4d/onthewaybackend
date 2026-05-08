@@ -1,0 +1,84 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number:
+            1c:61:fc:ba:f3:fd:77:26:04:cf:6b:28:32:e1:b3:7e
+        Signature Algorithm: sha256WithRSAEncryption
+        Issuer: CN=Aparmathi
+        Validity
+            Not Before: Oct 14 19:25:23 2025 GMT
+            Not After : Jan 17 19:25:23 2028 GMT
+        Subject: CN=Aparmathi
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    00:ce:ae:6a:fe:02:c5:f5:ea:b6:a4:81:11:21:9a:
+                    54:be:2e:3a:0f:56:4b:e4:9b:e9:e0:f9:ef:b4:84:
+                    8b:2b:cd:51:4e:ee:8a:c0:d7:92:c7:ec:8e:3f:33:
+                    37:c4:34:a9:bc:d3:c0:89:de:e5:c9:dd:b4:6d:1e:
+                    d9:22:ce:79:a1:47:27:5e:30:e7:ec:54:bb:ae:95:
+                    73:87:6c:05:68:88:83:45:40:eb:92:d0:80:f7:7d:
+                    48:ce:ee:88:0f:24:0d:a4:de:13:6f:d5:a5:d4:7b:
+                    17:2c:89:af:dc:9b:58:33:b4:f6:14:59:79:bb:64:
+                    e9:bd:9b:57:45:e8:ea:48:22:22:99:16:15:2f:b8:
+                    9a:6e:6d:ca:e0:b7:df:9a:f4:86:7c:14:69:c1:51:
+                    8a:25:e0:ac:73:80:04:0f:29:95:83:05:a7:18:15:
+                    04:c8:a4:04:ab:97:c7:a9:a2:46:c9:0e:5f:c5:80:
+                    bd:5a:ee:32:3c:2f:cc:f6:24:0d:bf:5d:0d:35:ce:
+                    2a:c5:1e:c1:ae:b7:9d:47:d0:95:9b:8b:31:40:45:
+                    dd:77:a4:23:33:d9:ab:05:08:b3:32:76:7d:54:73:
+                    2b:4e:64:88:88:63:d4:7e:fc:28:0e:80:5a:50:f7:
+                    a9:94:3f:ed:2b:a4:d0:1d:90:77:32:09:84:e7:f8:
+                    06:01
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Basic Constraints: 
+                CA:FALSE
+            X509v3 Subject Key Identifier: 
+                48:19:02:5F:CA:D2:16:43:AD:C1:9F:C3:5A:DB:4E:E7:EE:BA:87:ED
+            X509v3 Authority Key Identifier: 
+                keyid:4E:E8:36:B1:53:DC:5A:B3:D5:2F:5B:2F:38:2B:81:04:4B:BF:A4:FC
+                DirName:/CN=Aparmathi
+                serial:1A:6A:77:6E:D5:EA:5D:8D:B1:CC:14:0D:51:5A:9D:36:3B:74:07:CD
+            X509v3 Extended Key Usage: 
+                TLS Web Client Authentication
+            X509v3 Key Usage: 
+                Digital Signature
+    Signature Algorithm: sha256WithRSAEncryption
+    Signature Value:
+        7a:7f:9c:a8:25:2a:2c:10:37:e3:b0:bb:58:38:90:20:69:bd:
+        c4:46:68:3c:a6:12:8d:1a:df:43:d2:27:01:16:05:d1:88:6d:
+        e0:a9:fc:f1:32:65:06:6b:e2:fe:9e:01:97:b3:3d:4c:80:d3:
+        7a:7b:bf:be:5a:a8:18:c7:c2:61:bc:1c:f6:66:5f:37:b3:78:
+        5c:ff:9e:2f:26:3e:e6:49:0d:71:ff:39:61:9b:5a:be:01:b2:
+        4f:3e:0b:c3:fd:08:47:35:fe:d4:94:67:e0:4e:a6:db:c6:5a:
+        2b:b6:1d:7c:bf:75:e1:b5:dd:a9:89:08:d7:0e:63:21:aa:97:
+        04:9c:22:15:31:fa:9c:59:e5:7e:37:89:ad:4d:45:c9:ec:9f:
+        91:e6:e1:5c:f5:00:14:7d:f0:2c:f7:55:28:1e:4e:5e:b4:c5:
+        c0:8d:11:be:95:b5:23:b2:39:47:a3:76:41:29:2e:6c:0f:d5:
+        99:9b:3a:fc:05:25:83:09:b5:bc:46:69:0d:96:1e:df:e8:96:
+        38:87:57:8f:4a:cb:f4:37:09:53:ef:29:ab:04:b0:db:df:30:
+        33:7a:a8:1f:59:8c:e8:7b:19:d6:09:59:3e:b9:1b:24:cf:b7:
+        4a:df:75:f0:bd:59:4b:e3:06:2f:d0:c1:a7:cb:30:0e:34:75:
+        2d:3a:01:a2
+-----BEGIN CERTIFICATE-----
+MIIDUzCCAjugAwIBAgIQHGH8uvP9dyYEz2soMuGzfjANBgkqhkiG9w0BAQsFADAU
+MRIwEAYDVQQDDAlBcGFybWF0aGkwHhcNMjUxMDE0MTkyNTIzWhcNMjgwMTE3MTky
+NTIzWjAUMRIwEAYDVQQDDAlBcGFybWF0aGkwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+DwAwggEKAoIBAQDOrmr+AsX16rakgREhmlS+LjoPVkvkm+ng+e+0hIsrzVFO7orA
+15LH7I4/MzfENKm808CJ3uXJ3bRtHtkiznmhRydeMOfsVLuulXOHbAVoiINFQOuS
+0ID3fUjO7ogPJA2k3hNv1aXUexcsia/cm1gztPYUWXm7ZOm9m1dF6OpIIiKZFhUv
+uJpubcrgt9+a9IZ8FGnBUYol4KxzgAQPKZWDBacYFQTIpASrl8epokbJDl/FgL1a
+7jI8L8z2JA2/XQ01zirFHsGut51H0JWbizFARd13pCMz2asFCLMydn1UcytOZIiI
+Y9R+/CgOgFpQ96mUP+0rpNAdkHcyCYTn+AYBAgMBAAGjgaAwgZ0wCQYDVR0TBAIw
+ADAdBgNVHQ4EFgQUSBkCX8rSFkOtwZ/DWttO5+66h+0wTwYDVR0jBEgwRoAUTug2
+sVPcWrPVL1svOCuBBEu/pPyhGKQWMBQxEjAQBgNVBAMMCUFwYXJtYXRoaYIUGmp3
+btXqXY2xzBQNUVqdNjt0B80wEwYDVR0lBAwwCgYIKwYBBQUHAwIwCwYDVR0PBAQD
+AgeAMA0GCSqGSIb3DQEBCwUAA4IBAQB6f5yoJSosEDfjsLtYOJAgab3ERmg8phKN
+Gt9D0icBFgXRiG3gqfzxMmUGa+L+ngGXsz1MgNN6e7++WqgYx8JhvBz2Zl83s3hc
+/54vJj7mSQ1x/zlhm1q+AbJPPgvD/QhHNf7UlGfgTqbbxlorth18v3Xhtd2piQjX
+DmMhqpcEnCIVMfqcWeV+N4mtTUXJ7J+R5uFc9QAUffAs91UoHk5etMXAjRG+lbUj
+sjlHo3ZBKS5sD9WZmzr8BSWDCbW8RmkNlh7f6JY4h1ePSsv0NwlT7ymrBLDb3zAz
+eqgfWYzoexnWCVk+uRskz7dK33XwvVlL4wYv0MGnyzAONHUtOgGi
+-----END CERTIFICATE-----
