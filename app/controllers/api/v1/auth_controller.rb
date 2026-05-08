@@ -138,24 +138,19 @@ module Api
           return
         end
 
-        if phone.present? && existing_user.present?
-          otp = Otp.for_phone(phone).where(verified: true).last
-          delivery_success = true
-        else
-          # Create OTP (don't create user yet)
-          otp = if phone.present?
-                  Otp.create_for_phone(phone)
-                else
-                  Otp.create_for_email(email)
-                end
-          
-          # Send OTP via SMS or Email
-          delivery_success = if phone.present?
-                              SmsService.send_otp(phone, otp.code)
-                            else
-                              EmailService.send_otp(email, otp.code)
-                            end
-        end
+        # Create OTP (don't create user yet)
+        otp = if phone.present?
+                Otp.create_for_phone(phone)
+              else
+                Otp.create_for_email(email)
+              end
+
+        # Send OTP via SMS or Email
+        delivery_success = if phone.present?
+                             SmsService.send_otp(phone, otp.code)
+                           else
+                             EmailService.send_otp(email, otp.code)
+                           end
 
         if delivery_success
           response_data = {
@@ -175,6 +170,8 @@ module Api
           delivery_method = phone.present? ? 'SMS' : 'email'
           api_error(message: "Failed to send OTP via #{delivery_method}. Please try again.", status: :bad_request)
         end
+      rescue ActiveRecord::RecordInvalid => e
+        api_validation_error(errors: e.record.errors.full_messages)
       rescue => e
         Rails.logger.error "OTP Send Error: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
