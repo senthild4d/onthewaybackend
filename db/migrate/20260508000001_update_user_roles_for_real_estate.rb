@@ -1,5 +1,10 @@
 class UpdateUserRolesForRealEstate < ActiveRecord::Migration[8.0]
   def up
+    # IMPORTANT: Drop the old constraint first.
+    # Old vibes roles constraint doesn't allow the new 'user'/'owner' values,
+    # so updating rows before dropping it will fail.
+    execute "ALTER TABLE users DROP CONSTRAINT IF EXISTS check_role"
+
     # Map legacy roles into the 4 roles we keep:
     # - consumer/artist/brand -> user
     # - venue_manager        -> owner
@@ -15,9 +20,13 @@ class UpdateUserRolesForRealEstate < ActiveRecord::Migration[8.0]
       WHERE role IN ('venue_manager');
     SQL
 
-    # Drop and recreate role check constraint to only allow new roles.
-    # Name in schema is "check_role".
-    execute "ALTER TABLE users DROP CONSTRAINT IF EXISTS check_role"
+    # Normalize any unexpected legacy roles (safety net).
+    execute <<~SQL
+      UPDATE users
+      SET role = 'user'
+      WHERE role IS NULL
+         OR role NOT IN ('user', 'owner', 'support', 'admin');
+    SQL
 
     execute <<~SQL
       ALTER TABLE users
