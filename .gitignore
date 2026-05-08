@@ -1,0 +1,20 @@
+/.bundle/
+/.byebug_history
+
+# Rails
+/log/*
+/log/*.log
+/tmp/*
+!/tmp/.keep
+
+# Bootsnap cache
+/tmp/cache/bootsnap/*
+
+# Active Storage local files (if using Disk service in dev)
+/storage/*
+!/storage/.keep
+
+# Environment files
+.env
+.env.*
+

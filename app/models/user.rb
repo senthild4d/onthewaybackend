@@ -62,9 +62,27 @@ class User < ApplicationRecord
   has_many :event_posts, dependent: :destroy
   has_many :user_deactivations, dependent: :destroy
 
-  # Enums
-  enum :role, { consumer: 'consumer', artist: 'artist', venue_manager: 'venue_manager', admin: 'admin', brand: 'brand', support: 'support' }, prefix: true
+  # Enums (real-estate app)
+  enum :role, { user: 'user', owner: 'owner', support: 'support', admin: 'admin' }, prefix: true
   enum :status, { active: 'active', disabled: 'disabled' }, prefix: true
+
+  # Backward-compat role helpers (repo was cloned from "vibes" app).
+  # We keep these to avoid breaking existing controllers while we migrate features to properties.
+  def role_consumer?
+    role_user?
+  end
+
+  def role_artist?
+    role_user?
+  end
+
+  def role_brand?
+    role_user?
+  end
+
+  def role_venue_manager?
+    role_owner?
+  end
 
   store_accessor :current_location, :lat, :lng, :formatted_address, :place_id, :source, :recorded_at
 
@@ -100,9 +118,8 @@ class User < ApplicationRecord
 
   # Scopes
   scope :active, -> { where(status: 'active') }
-  scope :consumers, -> { where(role: 'consumer') }
-  scope :artists, -> { where(role: 'artist') }
-  scope :venue_managers, -> { where(role: 'venue_manager') }
+  scope :users, -> { where(role: 'user') }
+  scope :owners, -> { where(role: 'owner') }
   scope :admins, -> { where(role: 'admin') }
   scope :support_team, -> { where(role: 'support') }
 

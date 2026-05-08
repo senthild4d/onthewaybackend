@@ -40,12 +40,8 @@ module Api
       end
       
       # GET /api/v1/users/me
-      # For venue_manager/brand: includes last 1 year's moments, event images, and events with poster
-      # For regular users: includes user uploaded moments
       def me
         data = { user: user_response(current_user) }
-        data[:moment] = me_moments(current_user)
-        data[:events] = me_events_with_poster(current_user) if current_user.role_venue_manager? || current_user.role_brand?
         api_success(data: data, status: :ok)
       end
       

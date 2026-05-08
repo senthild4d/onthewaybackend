@@ -1,0 +1,180 @@
+{
+  "info": {
+    "name": "RealEstate API - Auth + Properties",
+    "_postman_id": "real-estate-api-collection-v1",
+    "description": "Real-estate backend API collection (derived from vibes)\n\n## Roles\nAllowed roles: user, owner, support, admin\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP + password + device)\n- Properties (CRUD + media + approval)\n- Maps (properties only)\n",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Send OTP (phone)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"1234567890\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/send_otp", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "send_otp"] }
+          }
+        },
+        {
+          "name": "Verify OTP (phone)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"1234567890\",\n  \"code\": \"123456\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/verify_otp", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "verify_otp"] }
+          }
+        },
+        {
+          "name": "Complete registration (new user)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"role\": \"user\",\n  \"name\": \"Test User\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/complete_registration", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "complete_registration"] }
+          }
+        },
+        {
+          "name": "Login (password)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user\": {\n    \"email\": \"test@example.com\",\n    \"password\": \"Password123\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "login"] }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Properties",
+      "item": [
+        {
+          "name": "List properties",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/properties?limit=20", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"], "query": [{ "key": "limit", "value": "20" }] }
+          }
+        },
+        {
+          "name": "Create property (owner)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property\": {\n    \"title\": \"2BHK Apartment\",\n    \"description\": \"Near metro\",\n    \"property_type\": \"apartment\",\n    \"bedrooms\": 2,\n    \"bathrooms\": 2,\n    \"area_sqft\": 950,\n    \"address1\": \"Street 1\",\n    \"city\": \"Mumbai\",\n    \"region\": \"MH\",\n    \"country\": \"IN\",\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"price\": 12000000,\n    \"currency\": \"INR\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"] }
+          }
+        },
+        {
+          "name": "Show property",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}"] }
+          }
+        },
+        {
+          "name": "Submit property (owner)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/submit", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "submit"] }
+          }
+        },
+        {
+          "name": "Approve property (support/admin)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/approve", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "approve"] }
+          }
+        },
+        {
+          "name": "Reject property (support/admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Missing ownership proof\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/reject", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "reject"] }
+          }
+        },
+        {
+          "name": "Upload property images (multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "images[]", "type": "file", "src": "" },
+                { "key": "images[]", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/images", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "images"] }
+          }
+        },
+        {
+          "name": "Upload property video (multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "video", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "video"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Map",
+      "item": [
+        {
+          "name": "Map markers (properties only)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/maps?limit=200", "host": ["{{base_url}}"], "path": ["api", "v1", "maps"], "query": [{ "key": "limit", "value": "200" }] }
+          }
+        },
+        {
+          "name": "Map filter options",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/maps/filter_options", "host": ["{{base_url}}"], "path": ["api", "v1", "maps", "filter_options"] }
+          }
+        }
+      ]
+    }
+  ]
+}
+

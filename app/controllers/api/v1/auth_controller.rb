@@ -313,6 +313,11 @@ module Api
           return
         end
 
+        unless role.to_s.in?(User.roles.keys)
+          api_error(message: "Invalid role. Allowed roles: #{User.roles.keys.join(', ')}", status: :bad_request)
+          return
+        end
+
         # Decode verification token
         begin
           decoded = JsonWebToken.decode(verification_token)

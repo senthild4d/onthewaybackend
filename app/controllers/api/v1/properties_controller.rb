@@ -1,0 +1,267 @@
+module Api
+  module V1
+    class PropertiesController < ApplicationController
+      before_action :require_authentication!, except: [:index, :show]
+      before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
+      before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
+      before_action :authorize_staff!, only: [:approve, :reject]
+
+      # GET /api/v1/properties
+      def index
+        scope = Property.includes(images_attachments: :blob, video_attachment: :blob, owner: { profile_picture_attachment: :blob })
+
+        # Public users only see approved listings. Owners can see their own drafts too.
+        if current_user&.role_owner?
+          scope = scope.where('approval_status = ? OR owner_id = ?', 'approved', current_user.id)
+        elsif current_user && (current_user.role_admin? || current_user.role_support?)
+          # staff sees all
+        else
+          scope = scope.visible_to_public
+        end
+
+        scope = scope.where(approval_status: Array(params[:status])) if params[:status].present? && current_user && (current_user.role_admin? || current_user.role_support?)
+        scope = scope.where(country: params[:country]) if params[:country].present?
+        scope = scope.where(city: params[:city]) if params[:city].present?
+        if params[:search].present?
+          q = "%#{params[:search]}%"
+          scope = scope.where('title ILIKE ? OR description ILIKE ? OR city ILIKE ? OR region ILIKE ?', q, q, q, q)
+        end
+
+        # bounds filter
+        if params[:north].present? && params[:south].present? && params[:east].present? && params[:west].present?
+          scope = scope.where(
+            'latitude >= ? AND latitude <= ? AND longitude >= ? AND longitude <= ?',
+            params[:south].to_f, params[:north].to_f, params[:west].to_f, params[:east].to_f
+          )
+        end
+
+        limit = [params[:limit]&.to_i || 50, 200].min
+        properties = scope.order(created_at: :desc).limit(limit)
+
+        api_success(data: { properties: properties.map { |p| property_response(p) } }, status: :ok)
+      end
+
+      # GET /api/v1/properties/:id
+      def show
+        unless can_view_property?(@property)
+          api_error(message: 'Property not found', status: :not_found)
+          return
+        end
+
+        api_success(data: { property: property_response(@property, detailed: true) }, status: :ok)
+      end
+
+      # POST /api/v1/properties
+      def create
+        require_owner!
+        property = Property.new(property_params.merge(owner_id: current_user.id))
+
+        attach_images(property)
+        attach_video(property)
+
+        if property.save
+          api_success(data: { property: property_response(property, detailed: true) }, message: 'Property created', status: :created)
+        else
+          api_validation_error(errors: property.errors.full_messages)
+        end
+      end
+
+      # PATCH /api/v1/properties/:id
+      def update
+        if @property.update(property_params)
+          api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property updated', status: :ok)
+        else
+          api_validation_error(errors: @property.errors.full_messages)
+        end
+      end
+
+      # DELETE /api/v1/properties/:id
+      def destroy
+        @property.destroy
+        api_success(message: 'Property deleted', status: :ok, data: { id: @property.id })
+      end
+
+      # POST /api/v1/properties/:id/submit
+      def submit
+        if @property.approval_status_draft? || @property.approval_status_rejected?
+          @property.submit_for_review!
+          api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Submitted for review', status: :ok)
+        else
+          api_error(message: 'Property cannot be submitted in its current state', status: :bad_request)
+        end
+      end
+
+      # POST /api/v1/properties/:id/approve
+      def approve
+        @property.approve!(by: current_user)
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property approved', status: :ok)
+      end
+
+      # POST /api/v1/properties/:id/reject
+      def reject
+        reason = params[:reason].to_s
+        if reason.blank?
+          api_error(message: 'reason is required', status: :bad_request)
+          return
+        end
+
+        @property.reject!(by: current_user, reason: reason)
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property rejected', status: :ok)
+      end
+
+      # POST /api/v1/properties/:id/images
+      def upload_images
+        attach_images(@property)
+        if @property.save
+          api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Images uploaded', status: :ok)
+        else
+          api_validation_error(errors: @property.errors.full_messages)
+        end
+      end
+
+      # DELETE /api/v1/properties/:id/images/:image_id
+      def remove_image
+        img = @property.images.attachments.find_by(id: params[:image_id])
+        unless img
+          api_error(message: 'Image not found', status: :not_found)
+          return
+        end
+        img.purge
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Image removed', status: :ok)
+      end
+
+      # POST /api/v1/properties/:id/video
+      def upload_video
+        attach_video(@property, replace: true)
+        if @property.save
+          api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Video uploaded', status: :ok)
+        else
+          api_validation_error(errors: @property.errors.full_messages)
+        end
+      end
+
+      # DELETE /api/v1/properties/:id/video
+      def remove_video
+        @property.video.purge if @property.video.attached?
+        api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Video removed', status: :ok)
+      end
+
+      private
+
+      def require_owner!
+        return if current_user&.role_owner?
+        api_error(message: 'Only owners can create properties', status: :forbidden)
+      end
+
+      def set_property
+        @property = Property.find_by(id: params[:id])
+        unless @property
+          api_error(message: 'Property not found', status: :not_found)
+          return
+        end
+      end
+
+      def authorize_owner_or_staff!
+        return if current_user&.role_admin? || current_user&.role_support?
+        return if current_user&.role_owner? && @property.owner_id == current_user.id
+        api_error(message: 'Unauthorized', status: :forbidden)
+      end
+
+      def authorize_staff!
+        return if current_user&.role_admin? || current_user&.role_support?
+        api_error(message: 'Unauthorized', status: :forbidden)
+      end
+
+      def can_view_property?(property)
+        return true if property.approval_status_approved?
+        return false if current_user.nil?
+        return true if current_user.role_admin? || current_user.role_support?
+        current_user.role_owner? && property.owner_id == current_user.id
+      end
+
+      def property_params
+        params.require(:property).permit(
+          :title,
+          :description,
+          :property_type,
+          :bedrooms,
+          :bathrooms,
+          :area_sqft,
+          :address1,
+          :address2,
+          :city,
+          :region,
+          :postal_code,
+          :country,
+          :latitude,
+          :longitude,
+          :price,
+          :currency
+        )
+      end
+
+      def attach_images(property)
+        imgs = params[:images]
+        imgs = [imgs].compact unless imgs.is_a?(Array)
+        imgs.each { |img| property.images.attach(img) } if imgs.present?
+      end
+
+      def attach_video(property, replace: false)
+        vid = params[:video]
+        return unless vid.present?
+        property.video.purge if replace && property.video.attached?
+        property.video.attach(vid)
+      end
+
+      def property_response(property, detailed: false)
+        host = request&.base_url || ENV['API_BASE_URL']
+        images = property.images.map do |img|
+          Rails.application.routes.url_helpers.rails_blob_url(img, host: host)
+        end
+        video_url =
+          if property.video.attached?
+            Rails.application.routes.url_helpers.rails_blob_url(property.video, host: host)
+          end
+
+        data = {
+          id: property.id,
+          title: property.title,
+          description: property.description,
+          property_type: property.property_type,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          area_sqft: property.area_sqft,
+          price: property.price,
+          currency: property.currency,
+          approval_status: property.approval_status,
+          submitted_at: property.submitted_at&.iso8601,
+          approved_at: property.approved_at&.iso8601,
+          rejected_at: property.rejected_at&.iso8601,
+          rejection_reason: property.rejection_reason,
+          address: {
+            address1: property.address1,
+            address2: property.address2,
+            city: property.city,
+            region: property.region,
+            postal_code: property.postal_code,
+            country: property.country,
+            full_address: property.full_address
+          },
+          coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
+          images: images,
+          video: video_url
+        }
+
+        if detailed
+          data[:owner] = {
+            id: property.owner_id,
+            name: property.owner&.name
+          }
+        end
+
+        data
+      end
+    end
+  end
+end
+
