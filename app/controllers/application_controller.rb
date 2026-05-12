@@ -9,9 +9,13 @@ class ApplicationController < ActionController::API
     "#{base_url_with_prefix}#{'/images/default-avatar.png'}"
   end
 
-  # Generate full URL for ActiveStorage attachments with correct subpath
+  # Generate full URL for ActiveStorage attachments with correct subpath.
+  # Accepts ActiveStorage::Attached::One, ActiveStorage::Attachment, or ActiveStorage::Blob.
   def attachment_url(attachment)
-    return nil unless attachment&.attached?
+    return nil if attachment.nil?
+    if attachment.respond_to?(:attached?)
+      return nil unless attachment.attached?
+    end
     path = Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true)
     "#{base_url_with_prefix}#{path}"
   end
