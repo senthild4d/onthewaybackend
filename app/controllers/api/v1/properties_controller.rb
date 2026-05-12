@@ -357,14 +357,8 @@ module Api
       end
 
       def property_response(property, detailed: false)
-        host = request&.base_url || ENV['API_BASE_URL']
-        images = property.images.map do |img|
-          Rails.application.routes.url_helpers.rails_blob_url(img, host: host)
-        end
-        video_url =
-          if property.video.attached?
-            Rails.application.routes.url_helpers.rails_blob_url(property.video, host: host)
-          end
+        images = property.images.map { |img| attachment_url(img) }
+        video_url = attachment_url(property.video)
 
         data = {
           id: property.id,

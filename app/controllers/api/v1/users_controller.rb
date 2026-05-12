@@ -130,9 +130,8 @@ module Api
         current_user.profile_picture.attach(profile_picture)
         
         if current_user.profile_picture.attached?
-          # Generate URL
-          picture_url = current_user.avatar_url
-          
+          picture_url = attachment_url(current_user.profile_picture)
+
           api_success(
             data: { 
               user: user_response(current_user),
@@ -631,13 +630,7 @@ module Api
       end
       
       def user_response(user)
-        avatar = if user.profile_picture.attached?
-                   url_for(user.profile_picture)
-                 elsif user.profile_picture_url.present?
-                   user.profile_picture_url
-                 else
-                   default_avatar_url
-                 end
+        avatar = attachment_url(user.profile_picture) || user.profile_picture_url.presence || default_avatar_url
 
         {
           id: user.id,
@@ -661,13 +654,7 @@ module Api
       
       
       def user_profile_response(user)
-        avatar = if user.profile_picture.attached?
-                   url_for(user.profile_picture)
-                 elsif user.profile_picture_url.present?
-                   user.profile_picture_url
-                 else
-                   default_avatar_url
-                 end
+        avatar = attachment_url(user.profile_picture) || user.profile_picture_url.presence || default_avatar_url
 
         {
           id: user.id,
@@ -689,13 +676,7 @@ module Api
       
       
       def user_basic_response(user)
-        avatar = if user.profile_picture.attached?
-                   url_for(user.profile_picture)
-                 elsif user.profile_picture_url.present?
-                   user.profile_picture_url
-                 else
-                   default_avatar_url
-                 end
+        avatar = attachment_url(user.profile_picture) || user.profile_picture_url.presence || default_avatar_url
 
         {
           id: user.id,

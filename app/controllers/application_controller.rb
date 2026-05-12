@@ -6,8 +6,21 @@ class ApplicationController < ActionController::API
 
   # Full URL for default avatar when user has no profile picture
   def default_avatar_url
+    "#{base_url_with_prefix}#{'/images/default-avatar.png'}"
+  end
+
+  # Generate full URL for ActiveStorage attachments with correct subpath
+  def attachment_url(attachment)
+    return nil unless attachment&.attached?
+    path = Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true)
+    "#{base_url_with_prefix}#{path}"
+  end
+
+  def base_url_with_prefix
     base = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com'
-    "#{base}#{DEFAULT_AVATAR_PATH}"
+    prefix = Rails.application.config.relative_url_root.to_s
+    prefix = '' if prefix == '/'
+    "#{base}#{prefix}"
   end
 
   private

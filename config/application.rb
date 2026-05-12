@@ -40,5 +40,8 @@ module Vibes
     # Middleware like session, flash, cookies can be added back manually.
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
+
+    # Subpath mount: set RAILS_RELATIVE_URL_ROOT=/ontheway in production
+    config.relative_url_root = ENV.fetch('RAILS_RELATIVE_URL_ROOT', '/')
   end
 end
