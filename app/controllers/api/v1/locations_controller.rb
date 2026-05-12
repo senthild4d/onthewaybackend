@@ -13,11 +13,6 @@ module Api
       # POST /api/v1/location/device
       def device
         snapshot = @manager.record_device_location(location_params)
-        
-        # Auto-add user to city-based group chats
-        city_manager = CityGroupChatManager.new(current_user)
-        city_manager.add_user_to_city_groups
-        
         api_success(data: { location: snapshot.as_json }, message: 'Device location updated')
       rescue UserLocationManager::ValidationError => e
         api_validation_error(errors: e.errors)
@@ -26,11 +21,6 @@ module Api
       # POST /api/v1/location/manual
       def manual
         snapshot = @manager.record_manual_location(location_params)
-        
-        # Auto-add user to city-based group chats
-        city_manager = CityGroupChatManager.new(current_user)
-        city_manager.add_user_to_city_groups
-        
         api_success(data: { location: snapshot.as_json }, message: 'Manual location updated')
       rescue UserLocationManager::ValidationError => e
         api_validation_error(errors: e.errors)

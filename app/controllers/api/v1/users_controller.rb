@@ -622,7 +622,7 @@ module Api
       end
       
       def user_params
-        params.require(:user).permit(:name, :username, :date_of_birth, :email, :phone, :bio)
+        params.require(:user).permit(:name, :username, :date_of_birth, :email, :phone, :bio, :description, :address)
       end
 
       def normalize_phone(phone)
@@ -651,6 +651,8 @@ module Api
           avatar_url: avatar,
           profile_picture_url: avatar,
           bio: user.bio,
+          description: user.description,
+          address: user.address,
           preferences: user.preferences,
           created_at: user.created_at,
           updated_at: user.updated_at

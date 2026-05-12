@@ -337,30 +337,39 @@ module Api
           return
         end
 
+        # Allow providing additional contact info during registration
+        additional_email = params[:email]&.downcase&.strip
+        additional_phone = params[:phone]&.strip
+
         # Create new user
         user = User.new(
-          phone: phone,
-          email: email,
+          phone: phone.presence || additional_phone,
+          email: email.presence || additional_email,
           name: name,
           role: role,
-          password: SecureRandom.hex(16), # Temporary password
+          description: params[:description],
+          address: params[:address],
+          password: SecureRandom.hex(16),
           status: 'active'
         )
 
+        # If verified via phone but also provided email, add it
+        if phone.present? && additional_email.present?
+          user.email = additional_email
+        end
+
+        # If verified via email but also provided phone, add it
+        if email.present? && additional_phone.present?
+          user.phone = additional_phone
+        end
+
         if user.save
-          # Generate persistent token (90 days) for Instagram-like login
           token = JsonWebToken.encode_persistent(user_id: user.id)
-          
+
           api_success(
             data: {
               user: user_response(user),
-              token: token,
-              next_steps: {
-                optional: [
-                  'Setup password for password-based login',
-                  'Register device for biometric authentication'
-                ]
-              }
+              token: token
             },
             message: 'Registration completed successfully',
             status: :created
@@ -1047,6 +1056,8 @@ module Api
           name: user.name,
           role: user.role,
           status: user.status,
+          description: user.description,
+          address: user.address,
           preferences: user.preferences,
           created_at: user.created_at
         }

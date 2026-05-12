@@ -2,7 +2,7 @@
   "info": {
     "name": "RealEstate API - Auth + Properties",
     "_postman_id": "real-estate-api-collection-v1",
-    "description": "Real-estate backend API collection\n\n## Roles\nAllowed roles: user, owner\nAdmin is a flag: users.is_admin=true\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP)\n- Properties (CRUD + media + approval + lifecycle)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n",
+    "description": "Real-estate backend API collection\n\n## Roles\nAllowed roles: user, owner\nAdmin is a flag: users.is_admin=true\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP)\n- Profile\n- Properties (CRUD + media + approval + lifecycle)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -30,6 +30,16 @@
           }
         },
         {
+          "name": "Send OTP (email)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/send_otp", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "send_otp"] }
+          }
+        },
+        {
           "name": "Verify OTP (phone)",
           "request": {
             "auth": { "type": "noauth" },
@@ -40,14 +50,37 @@
           }
         },
         {
-          "name": "Complete registration (new user)",
+          "name": "Verify OTP (email)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"code\": \"123456\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/verify_otp", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "verify_otp"] }
+          }
+        },
+        {
+          "name": "Complete Registration (user)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"role\": \"user\",\n  \"name\": \"Test User\"\n}"
+              "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"role\": \"user\",\n  \"name\": \"Test User\",\n  \"email\": \"user@example.com\",\n  \"phone\": \"1234567890\",\n  \"description\": \"Looking for a new home\",\n  \"address\": \"123 Main Street, City\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/complete_registration", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "complete_registration"] }
+          }
+        },
+        {
+          "name": "Complete Registration (owner)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"role\": \"owner\",\n  \"name\": \"Property Owner\",\n  \"email\": \"owner@realestate.com\",\n  \"phone\": \"9876543210\",\n  \"description\": \"Licensed real estate agent with 10 years of experience\",\n  \"address\": \"456 Business Tower, Dubai, UAE\"\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/auth/complete_registration", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "complete_registration"] }
           }
@@ -68,12 +101,146 @@
             "method": "GET",
             "url": { "raw": "{{base_url}}/api/v1/auth/me", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "me"] }
           }
+        },
+        {
+          "name": "Setup Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"password\": \"Password123\",\n  \"password_confirmation\": \"Password123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/setup_password", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "setup_password"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/me", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me"] }
+          }
+        },
+        {
+          "name": "Get User Profile",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"name\": \"Updated Name\",\n    \"username\": \"myusername\",\n    \"bio\": \"Hello world\",\n    \"description\": \"Real estate professional\",\n    \"address\": \"789 New Address, City\",\n    \"date_of_birth\": \"1990-01-15\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/users/me", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me"] }
+          }
+        },
+        {
+          "name": "Upload Profile Picture",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "profile_picture", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/upload_profile_picture", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "upload_profile_picture"] }
+          }
+        },
+        {
+          "name": "Change Email",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"newemail@example.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/change_email", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "change_email"] }
+          }
+        },
+        {
+          "name": "Verify Email Change",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"otp_code\": \"123456\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/verify_email_change", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "verify_email_change"] }
+          }
+        },
+        {
+          "name": "Change Phone",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"9876543210\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/change_phone", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "change_phone"] }
+          }
+        },
+        {
+          "name": "Verify Phone Change",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"verification_token\": \"{{verification_token}}\",\n  \"otp_code\": \"123456\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/verify_phone_change", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "verify_phone_change"] }
+          }
+        },
+        {
+          "name": "Unlink Email",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/users/me/unlink_email", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "unlink_email"] }
+          }
+        },
+        {
+          "name": "Unlink Phone",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/users/me/unlink_phone", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "unlink_phone"] }
+          }
+        },
+        {
+          "name": "Deactivate Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"I am leaving temporarily\",\n  \"additional_feedback\": \"Will be back soon\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/deactivate", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "deactivate"] }
+          }
+        },
+        {
+          "name": "Reactivate Account",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/users/me/reactivate", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "reactivate"] }
+          }
         }
       ]
     },
     {
       "name": "Properties",
       "item": [
+        {
+          "name": "Form Options (currencies, purposes, types)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/properties/form_options", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "form_options"] }
+          }
+        },
         {
           "name": "List properties",
           "request": {
@@ -83,13 +250,33 @@
           }
         },
         {
-          "name": "Create property (owner)",
+          "name": "Create property with images (owner)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
-              "mode": "raw",
-              "raw": "{\n  \"property\": {\n    \"title\": \"2BHK Apartment\",\n    \"description\": \"Near metro\",\n    \"purpose\": \"sale\",\n    \"property_type\": \"apartment\",\n    \"bedrooms\": 2,\n    \"bathrooms\": 2,\n    \"area_sqm\": 88.0,\n    \"address1\": \"Street 1\",\n    \"city\": \"Mumbai\",\n    \"region\": \"MH\",\n    \"country\": \"IN\",\n    \"latitude\": 19.0760,\n    \"longitude\": 72.8777,\n    \"price\": 12000000,\n    \"currency\": \"INR\",\n    \"features\": { \"elevator\": true, \"balcony\": true }\n  }\n}"
+              "mode": "formdata",
+              "formdata": [
+                { "key": "property[title]", "value": "2BHK Apartment", "type": "text" },
+                { "key": "property[description]", "value": "Near metro", "type": "text" },
+                { "key": "property[purpose]", "value": "sale", "type": "text" },
+                { "key": "property[property_type]", "value": "apartment", "type": "text" },
+                { "key": "property[bedrooms]", "value": "2", "type": "text" },
+                { "key": "property[bathrooms]", "value": "2", "type": "text" },
+                { "key": "property[area_sqm]", "value": "88.0", "type": "text" },
+                { "key": "property[address1]", "value": "Street 1", "type": "text" },
+                { "key": "property[city]", "value": "Mumbai", "type": "text" },
+                { "key": "property[region]", "value": "MH", "type": "text" },
+                { "key": "property[country]", "value": "IN", "type": "text" },
+                { "key": "property[latitude]", "value": "19.0760", "type": "text" },
+                { "key": "property[longitude]", "value": "72.8777", "type": "text" },
+                { "key": "property[price]", "value": "12000000", "type": "text" },
+                { "key": "property[currency]", "value": "INR", "type": "text" },
+                { "key": "property[features][elevator]", "value": "true", "type": "text" },
+                { "key": "property[features][balcony]", "value": "true", "type": "text" },
+                { "key": "images[]", "type": "file", "src": "" },
+                { "key": "images[]", "type": "file", "src": "" },
+                { "key": "images[]", "type": "file", "src": "" }
+              ]
             },
             "url": { "raw": "{{base_url}}/api/v1/properties", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"] }
           }
@@ -103,6 +290,25 @@
           }
         },
         {
+          "name": "Update property (owner)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property\": {\n    \"title\": \"Updated Title\",\n    \"price\": 15000000\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}"] }
+          }
+        },
+        {
+          "name": "Delete property (owner)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}"] }
+          }
+        },
+        {
           "name": "Submit property (owner)",
           "request": {
             "method": "POST",
@@ -110,14 +316,14 @@
           }
         },
         {
-          "name": "Approve property (support/admin)",
+          "name": "Approve property (admin)",
           "request": {
             "method": "POST",
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/approve", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "approve"] }
           }
         },
         {
-          "name": "Reject property (support/admin)",
+          "name": "Reject property (admin)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -161,6 +367,13 @@
           }
         },
         {
+          "name": "Remove property image",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/images/{{image_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "images", "{{image_id}}"] }
+          }
+        },
+        {
           "name": "Upload property video (multipart)",
           "request": {
             "method": "POST",
@@ -170,6 +383,13 @@
                 { "key": "video", "type": "file", "src": "" }
               ]
             },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "video"] }
+          }
+        },
+        {
+          "name": "Remove property video",
+          "request": {
+            "method": "DELETE",
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "video"] }
           }
         }
@@ -256,6 +476,49 @@
       ]
     },
     {
+      "name": "Location",
+      "item": [
+        {
+          "name": "Get current location",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/location", "host": ["{{base_url}}"], "path": ["api", "v1", "location"] }
+          }
+        },
+        {
+          "name": "Update device location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 25.2048,\n    \"lng\": 55.2708,\n    \"formatted_address\": \"Downtown Dubai, UAE\",\n    \"place_id\": \"ChIJRcbZaklDXz4RYlEphFBu5r0\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/location/device", "host": ["{{base_url}}"], "path": ["api", "v1", "location", "device"] }
+          }
+        },
+        {
+          "name": "Set manual location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": {\n    \"lat\": 25.2048,\n    \"lng\": 55.2708,\n    \"formatted_address\": \"Dubai Marina, UAE\",\n    \"place_id\": \"ChIJRcbZaklDXz4RYlEphFBu5r0\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/location/manual", "host": ["{{base_url}}"], "path": ["api", "v1", "location", "manual"] }
+          }
+        },
+        {
+          "name": "Reset location",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/location/reset", "host": ["{{base_url}}"], "path": ["api", "v1", "location", "reset"] }
+          }
+        }
+      ]
+    },
+    {
       "name": "Map",
       "item": [
         {
@@ -288,4 +551,3 @@
     }
   ]
 }
-

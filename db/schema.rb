@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_08_000034) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_12_095744) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -285,6 +285,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_08_000034) do
     t.text "bio"
     t.jsonb "support_countries", default: [], null: false, comment: "Country codes (e.g. UK, US) this support user can moderate"
     t.boolean "is_admin", default: false, null: false
+    t.text "description"
+    t.text "address"
     t.index ["created_at"], name: "index_users_on_created_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["is_admin"], name: "index_users_on_is_admin"

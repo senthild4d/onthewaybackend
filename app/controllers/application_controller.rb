@@ -6,7 +6,7 @@ class ApplicationController < ActionController::API
 
   # Full URL for default avatar when user has no profile picture
   def default_avatar_url
-    base = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com'
+    base = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com/ontheway'
     "#{base}#{DEFAULT_AVATAR_PATH}"
   end
 
