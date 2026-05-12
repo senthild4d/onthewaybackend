@@ -17,7 +17,8 @@ class ApplicationController < ActionController::API
       return nil unless attachment.attached?
     end
     path = Rails.application.routes.url_helpers.rails_blob_path(attachment, only_path: true)
-    "#{base_url_with_prefix}#{path}"
+    base = request&.base_url || ENV['API_BASE_URL'] || 'https://vibesapp.digital4design.com'
+    "#{base}#{path}"
   end
 
   def base_url_with_prefix
