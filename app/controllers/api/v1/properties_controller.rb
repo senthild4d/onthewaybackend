@@ -1,7 +1,7 @@
 module Api
   module V1
     class PropertiesController < ApplicationController
-      before_action :require_authentication!, except: [:index, :show]
+      before_action :require_authentication!, except: [:index, :show, :form_options]
       before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
       before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
@@ -89,6 +89,67 @@ module Api
                      end.limit(limit)
 
         api_success(data: { properties: properties.map { |p| property_response(p) } }, status: :ok)
+      end
+
+      # GET /api/v1/properties/form_options
+      def form_options
+        options = {
+          currencies: [
+            { value: 'USD', label: 'US Dollar', symbol: '$' },
+            { value: 'EUR', label: 'Euro', symbol: '€' },
+            { value: 'GBP', label: 'British Pound', symbol: '£' },
+            { value: 'AED', label: 'UAE Dirham', symbol: 'د.إ' },
+            { value: 'SAR', label: 'Saudi Riyal', symbol: '﷼' },
+            { value: 'INR', label: 'Indian Rupee', symbol: '₹' },
+            { value: 'PKR', label: 'Pakistani Rupee', symbol: '₨' },
+            { value: 'CAD', label: 'Canadian Dollar', symbol: 'C$' },
+            { value: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
+            { value: 'SGD', label: 'Singapore Dollar', symbol: 'S$' },
+            { value: 'QAR', label: 'Qatari Riyal', symbol: 'ر.ق' },
+            { value: 'KWD', label: 'Kuwaiti Dinar', symbol: 'د.ك' },
+            { value: 'BHD', label: 'Bahraini Dinar', symbol: '.د.ب' },
+            { value: 'OMR', label: 'Omani Rial', symbol: 'ر.ع.' },
+            { value: 'EGP', label: 'Egyptian Pound', symbol: 'E£' },
+            { value: 'TRY', label: 'Turkish Lira', symbol: '₺' }
+          ],
+          purposes: [
+            { value: 'sale', label: 'Sale' },
+            { value: 'rent', label: 'Rent' }
+          ],
+          property_types: [
+            { value: 'apartment', label: 'Apartment' },
+            { value: 'villa', label: 'Villa' },
+            { value: 'townhouse', label: 'Townhouse' },
+            { value: 'penthouse', label: 'Penthouse' },
+            { value: 'studio', label: 'Studio' },
+            { value: 'duplex', label: 'Duplex' },
+            { value: 'land', label: 'Land' },
+            { value: 'office', label: 'Office' },
+            { value: 'shop', label: 'Shop' },
+            { value: 'warehouse', label: 'Warehouse' },
+            { value: 'building', label: 'Building' },
+            { value: 'farm', label: 'Farm' },
+            { value: 'other', label: 'Other' }
+          ],
+          features: [
+            { value: 'balcony', label: 'Balcony' },
+            { value: 'garden', label: 'Garden' },
+            { value: 'pool', label: 'Swimming Pool' },
+            { value: 'gym', label: 'Gym' },
+            { value: 'elevator', label: 'Elevator' },
+            { value: 'security', label: '24/7 Security' },
+            { value: 'parking', label: 'Parking' },
+            { value: 'central_ac', label: 'Central A/C' },
+            { value: 'maid_room', label: "Maid's Room" },
+            { value: 'storage', label: 'Storage Room' },
+            { value: 'pets_allowed', label: 'Pets Allowed' },
+            { value: 'furnished', label: 'Furnished' },
+            { value: 'sea_view', label: 'Sea View' },
+            { value: 'city_view', label: 'City View' }
+          ]
+        }
+
+        api_success(data: options, status: :ok)
       end
 
       # GET /api/v1/properties/:id

@@ -631,7 +631,13 @@ module Api
       end
       
       def user_response(user)
-        pr_partnership = user.venue_pr_partnerships&.active&.last
+        avatar = if user.profile_picture.attached?
+                   url_for(user.profile_picture)
+                 elsif user.profile_picture_url.present?
+                   user.profile_picture_url
+                 else
+                   default_avatar_url
+                 end
 
         {
           id: user.id,
@@ -640,128 +646,61 @@ module Api
           username: user.username,
           name: user.name,
           date_of_birth: user.date_of_birth,
-          role: pr_partnership&.role || user.role,
-          venue_id: (user.role_venue_manager? ? user.venues.first&.id : nil),
-          pr_venue_id: pr_partnership&.venue_id,
+          role: user.role,
           status: user.status,
-          avatar_url: (user.avatar_url == DEFAULT_AVATAR_PATH ? default_avatar_url : user.avatar_url),
-          profile_picture_url: user.profile_picture.attached? ? url_for(user.profile_picture) : default_avatar_url,
-          bio: user.respond_to?(:bio) ? user.bio : nil,
-          followers_count: user.followers_count,
-          following_count: user.following_count,
-          events_count: calculate_events_count(user),
-          categories: user.role_artist? ? user.categories.map { |c| { id: c.id, name: c.name } } : [],
-          is_following: current_user.present? ? current_user.following?(user) : false,
-          is_followed_by: current_user.present? ? current_user.followed_by?(user) : false,
+          avatar_url: avatar,
+          profile_picture_url: avatar,
+          bio: user.bio,
           preferences: user.preferences,
           created_at: user.created_at,
           updated_at: user.updated_at
         }
-      rescue => e
-        Rails.logger.error "User response error: #{e.message}"
-
-        pr_partnership = user.venue_pr_partnerships&.active&.last
-
-        {
-          id: user.id,
-          email: user.email,
-          phone: user.phone,
-          username: user.username,
-          name: user.name,
-          date_of_birth: user.date_of_birth,
-          role: pr_partnership&.role || user.role,
-          venue_id: (user.role_venue_manager? ? user.venues.first&.id : nil),
-          pr_venue_id: pr_partnership&.venue_id,
-          status: user.status,
-          avatar_url: default_avatar_url,
-          profile_picture_url: default_avatar_url,
-          bio: user.respond_to?(:bio) ? user.bio : nil,
-          followers_count: 0,
-          following_count: 0,
-          events_count: 0,
-          categories: [],
-          is_following: false,
-          is_followed_by: false,
-          created_at: user.created_at,
-          updated_at: user.updated_at
-        }
       end
       
-      def calculate_events_count(user)
-        count = 0
-        
-        # Count events as artist (through EventArtist)
-        if user.role_artist?
-          count += EventArtist.where(artist_id: user.id).count
-        end
-        
-        # Count events as venue owner (through venues)
-        if user.venues.any?
-          count += user.venues.sum { |v| v.events.count }
-        end
-        
-        count
-      end
       
       def user_profile_response(user)
-        follow_status = get_follow_request_status(user)
-        
+        avatar = if user.profile_picture.attached?
+                   url_for(user.profile_picture)
+                 elsif user.profile_picture_url.present?
+                   user.profile_picture_url
+                 else
+                   default_avatar_url
+                 end
+
         {
           id: user.id,
           username: user.username,
           name: user.name,
-          role: user.venue_pr_partnerships&.active&.last&.role || user.role,
-          avatar_url: user.respond_to?(:avatar_url) && user.avatar_url.present? ? user.avatar_url : default_avatar_url,
-          bio: user.respond_to?(:bio) ? user.bio : nil,
+          role: user.role,
+          avatar_url: avatar,
+          profile_picture_url: avatar,
+          bio: user.bio,
           date_of_birth: user.date_of_birth,
           stats: {
-            followers_count: user.followers_count,
-            following_count: user.following_count,
-            events_created: user.venues.sum { |v| v.events.count },
-            venues_owned: user.venues.count,
-            bookings_count: user.bookings.count
+            properties_count: Property.where(owner_id: user.id).count,
+            favorites_count: user.favorites.count
           },
-          is_following: current_user.following?(user),
-          is_followed_by: current_user.followed_by?(user),
-          has_pending_request_to: follow_status[:has_pending_request_to],
-          has_pending_request_from: follow_status[:has_pending_request_from],
-          pending_request_id: follow_status[:pending_request_id],
-          pending_request_to_id: follow_status[:pending_request_to_id],
           is_me: user == current_user,
           created_at: user.created_at
         }
       end
       
-      # Get follow request status between current_user and target user
-      def get_follow_request_status(target_user)
-        return { 
-          has_pending_request_to: false, 
-          has_pending_request_from: false, 
-          pending_request_id: nil,
-          pending_request_to_id: nil
-        } if target_user == current_user
-        
-        # Check if current_user sent a pending request to target_user
-        pending_request_to = current_user.follow_requests_sent.pending.find_by(requested_id: target_user.id)
-        
-        # Check if current_user received a pending request from target_user
-        pending_request_from = current_user.follow_requests_received.pending.find_by(requester_id: target_user.id)
-        
-        {
-          has_pending_request_to: pending_request_to.present?,
-          has_pending_request_from: pending_request_from.present?,
-          pending_request_id: pending_request_from&.id,  # ID of request received (for Accept/Reject)
-          pending_request_to_id: pending_request_to&.id  # ID of request sent (for Cancel)
-        }
-      end
       
       def user_basic_response(user)
+        avatar = if user.profile_picture.attached?
+                   url_for(user.profile_picture)
+                 elsif user.profile_picture_url.present?
+                   user.profile_picture_url
+                 else
+                   default_avatar_url
+                 end
+
         {
           id: user.id,
           username: user.username,
           name: user.name,
-          role: user.venue_pr_partnerships&.active&.last&.role || user.role,
-          avatar_url: user.respond_to?(:avatar_url) && user.avatar_url.present? ? user.avatar_url : default_avatar_url
+          role: user.role,
+          avatar_url: avatar
         }
       end
     end

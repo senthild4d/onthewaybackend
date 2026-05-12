@@ -75,6 +75,7 @@ Rails.application.routes.draw do
       get 'maps/filter_options', to: 'maps#filter_options'
 
       # Properties (real-estate)
+      get 'properties/form_options', to: 'properties#form_options'
       resources :properties, except: [:new, :edit] do
         member do
           post 'submit', to: 'properties#submit'
