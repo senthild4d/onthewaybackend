@@ -325,7 +325,11 @@ module Api
           return
         end
 
-        # Check if user already exists (prevent double registration)
+        # Allow providing additional contact info during registration
+        additional_email = params[:email]&.downcase&.strip
+        additional_phone = params[:phone]&.strip
+
+        # Check if user already exists — update instead of rejecting
         existing_user = if phone.present?
                           User.find_by(phone: phone)
                         else
@@ -333,13 +337,30 @@ module Api
                         end
 
         if existing_user
-          api_error(message: 'User already registered', status: :bad_request)
+          update_attrs = { role: role }
+          update_attrs[:name] = name if name.present?
+          update_attrs[:description] = params[:description] if params[:description].present?
+          update_attrs[:address] = params[:address] if params[:address].present?
+          update_attrs[:email] = additional_email if additional_email.present? && existing_user.email.blank?
+          update_attrs[:phone] = additional_phone if additional_phone.present? && existing_user.phone.blank?
+          update_attrs[:status] = 'active'
+
+          if existing_user.update(update_attrs)
+            token = JsonWebToken.encode_persistent(user_id: existing_user.id)
+
+            api_success(
+              data: {
+                user: user_response(existing_user),
+                token: token
+              },
+              message: 'Registration completed successfully',
+              status: :ok
+            )
+          else
+            api_validation_error(errors: existing_user.errors.full_messages)
+          end
           return
         end
-
-        # Allow providing additional contact info during registration
-        additional_email = params[:email]&.downcase&.strip
-        additional_phone = params[:phone]&.strip
 
         # Create new user
         user = User.new(

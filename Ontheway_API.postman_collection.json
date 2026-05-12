@@ -15,6 +15,36 @@
       }
     ]
   },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://vibesapp.digital4design.com/ontheway"
+    },
+    {
+      "key": "jwt_token",
+      "value": ""
+    },
+    {
+      "key": "verification_token",
+      "value": ""
+    },
+    {
+      "key": "property_id",
+      "value": ""
+    },
+    {
+      "key": "user_id",
+      "value": ""
+    },
+    {
+      "key": "viewing_id",
+      "value": ""
+    },
+    {
+      "key": "image_id",
+      "value": ""
+    }
+  ],
   "item": [
     {
       "name": "Auth",
