@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_12_095744) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_13_014741) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -81,6 +81,26 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_12_095744) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["kind"], name: "index_legal_documents_on_kind", unique: true
+  end
+
+  create_table "notifications", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "user_id", null: false
+    t.string "notification_type", null: false
+    t.string "title", null: false
+    t.text "body"
+    t.jsonb "data", default: {}, null: false
+    t.boolean "read", default: false, null: false
+    t.datetime "read_at"
+    t.string "related_type"
+    t.uuid "related_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_notifications_on_created_at"
+    t.index ["notification_type"], name: "index_notifications_on_notification_type"
+    t.index ["read"], name: "index_notifications_on_read"
+    t.index ["related_type", "related_id"], name: "index_notifications_on_related_type_and_related_id"
+    t.index ["user_id", "read"], name: "index_notifications_on_user_id_and_read"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
   end
 
   create_table "otps", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -305,6 +325,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_12_095744) do
   add_foreign_key "devices", "users"
   add_foreign_key "favorites", "properties", on_delete: :cascade
   add_foreign_key "favorites", "users", on_delete: :cascade
+  add_foreign_key "notifications", "users", on_delete: :cascade
   add_foreign_key "otps", "users"
   add_foreign_key "properties", "users", column: "approved_by_id", on_delete: :nullify
   add_foreign_key "properties", "users", column: "archived_by_id", on_delete: :nullify

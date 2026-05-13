@@ -43,6 +43,14 @@
     {
       "key": "image_id",
       "value": ""
+    },
+    {
+      "key": "notification_id",
+      "value": ""
+    },
+    {
+      "key": "reset_token",
+      "value": ""
     }
   ],
   "item": [
@@ -146,6 +154,36 @@
           "request": {
             "method": "POST",
             "url": { "raw": "{{base_url}}/api/v1/auth/logout", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "logout"] }
+          }
+        },
+        {
+          "name": "Forgot Password (request OTP)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/forgot_password", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "forgot_password"] }
+          }
+        },
+        {
+          "name": "Verify Reset OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"code\": \"123456\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/verify_reset_otp", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "verify_reset_otp"] }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reset_token\": \"{{reset_token}}\",\n  \"password\": \"NewPassword123\",\n  \"password_confirmation\": \"NewPassword123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/reset_password", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "reset_password"] }
           }
         }
       ]
@@ -252,6 +290,15 @@
           }
         },
         {
+          "name": "Delete Account",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Other reason\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me/delete", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "delete"] }
+          }
+        },
+        {
           "name": "Reactivate Account",
           "request": {
             "method": "POST",
@@ -272,11 +319,45 @@
           }
         },
         {
-          "name": "List properties",
+          "name": "List properties (paginated)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
-            "url": { "raw": "{{base_url}}/api/v1/properties?limit=20", "host": ["{{base_url}}"], "path": ["api", "v1", "properties"], "query": [{ "key": "limit", "value": "20" }] }
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "purpose", "value": "sale", "disabled": true },
+                { "key": "property_type", "value": "apartment", "disabled": true },
+                { "key": "city", "value": "Dubai", "disabled": true },
+                { "key": "min_price", "value": "100000", "disabled": true },
+                { "key": "max_price", "value": "5000000", "disabled": true },
+                { "key": "min_bedrooms", "value": "1", "disabled": true },
+                { "key": "max_bedrooms", "value": "5", "disabled": true },
+                { "key": "sort_by", "value": "newest", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search properties",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/properties/search?q=apartment&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "properties", "search"],
+              "query": [
+                { "key": "q", "value": "apartment" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
+              ]
+            }
           }
         },
         {
@@ -575,6 +656,239 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": { "raw": "{{base_url}}/api/v1/maps/filter_options", "host": ["{{base_url}}"], "path": ["api", "v1", "maps", "filter_options"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "unread_only", "value": "true", "disabled": true },
+                { "key": "type", "value": "viewing_requested", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get unread count",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/notifications/unread_count", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "unread_count"] }
+          }
+        },
+        {
+          "name": "Get notification",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "{{notification_id}}"] }
+          }
+        },
+        {
+          "name": "Mark notification as read",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/mark_read", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "{{notification_id}}", "mark_read"] }
+          }
+        },
+        {
+          "name": "Mark all as read",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/notifications/mark_all_read", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "mark_all_read"] }
+          }
+        },
+        {
+          "name": "Delete notification",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "{{notification_id}}"] }
+          }
+        },
+        {
+          "name": "Test push notification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Test\",\n  \"body\": \"This is a test push notification\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/notifications/test", "host": ["{{base_url}}"], "path": ["api", "v1", "notifications", "test"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Dashboard",
+      "item": [
+        {
+          "name": "Dashboard stats",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/dashboard/stats", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "dashboard", "stats"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Users",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "role", "value": "owner", "disabled": true },
+                { "key": "status", "value": "active", "disabled": true },
+                { "key": "admins_only", "value": "true", "disabled": true },
+                { "key": "q", "value": "john", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get user details",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Update user",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user\": {\n    \"name\": \"Updated Name\",\n    \"email\": \"newemail@example.com\",\n    \"bio\": \"Updated bio\"\n  }\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Update user role",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role\": \"owner\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/role", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "role"] }
+          }
+        },
+        {
+          "name": "Promote to admin",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/promote_admin", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "promote_admin"] }
+          }
+        },
+        {
+          "name": "Demote from admin",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/demote_admin", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "demote_admin"] }
+          }
+        },
+        {
+          "name": "Activate user",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/activate", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "activate"] }
+          }
+        },
+        {
+          "name": "Deactivate user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Policy violation\",\n  \"additional_feedback\": \"Multiple flagged reports\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/deactivate", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}", "deactivate"] }
+          }
+        },
+        {
+          "name": "Delete user",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "users", "{{user_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Properties",
+      "item": [
+        {
+          "name": "List properties (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/properties?page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "properties"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "approval_status", "value": "pending_review", "disabled": true },
+                { "key": "listing_status", "value": "active", "disabled": true },
+                { "key": "purpose", "value": "sale", "disabled": true },
+                { "key": "owner_id", "value": "", "disabled": true },
+                { "key": "q", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get property (admin)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}"] }
+          }
+        },
+        {
+          "name": "Approve property",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}/approve", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}", "approve"] }
+          }
+        },
+        {
+          "name": "Reject property",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Incomplete documentation\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}/reject", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}", "reject"] }
+          }
+        },
+        {
+          "name": "Archive property",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}/archive", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}", "archive"] }
+          }
+        },
+        {
+          "name": "Unarchive property",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}/unarchive", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}", "unarchive"] }
+          }
+        },
+        {
+          "name": "Delete property (admin)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/api/v1/admin/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "properties", "{{property_id}}"] }
           }
         }
       ]

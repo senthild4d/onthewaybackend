@@ -1,7 +1,7 @@
 module Api
   module V1
     class PropertiesController < ApplicationController
-      before_action :require_authentication!, except: [:index, :show, :form_options]
+      before_action :require_authentication!, except: [:index, :show, :form_options, :search]
       before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
       before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
@@ -67,9 +67,16 @@ module Api
           end
         end
 
-        if params[:search].present?
-          q = "%#{params[:search]}%"
-          scope = scope.where('title ILIKE ? OR description ILIKE ? OR city ILIKE ? OR region ILIKE ?', q, q, q, q)
+        # Full-text search across multiple fields
+        if params[:search].present? || params[:q].present?
+          term = (params[:search] || params[:q]).to_s.strip
+          if term.present?
+            q = "%#{term}%"
+            scope = scope.where(
+              'title ILIKE ? OR description ILIKE ? OR city ILIKE ? OR region ILIKE ? OR country ILIKE ? OR address1 ILIKE ? OR address2 ILIKE ? OR postal_code ILIKE ?',
+              q, q, q, q, q, q, q, q
+            )
+          end
         end
 
         # bounds filter
@@ -80,19 +87,94 @@ module Api
           )
         end
 
-        limit = [params[:limit]&.to_i || 50, 200].min
-        properties = case params[:sort_by].to_s
-                     when 'price_asc' then scope.order(Arel.sql('price ASC NULLS LAST'), created_at: :desc)
-                     when 'price_desc' then scope.order(Arel.sql('price DESC NULLS LAST'), created_at: :desc)
-                     when 'newest' then scope.order(created_at: :desc)
-                     else scope.order(created_at: :desc)
-                     end.limit(limit)
+        sorted = case params[:sort_by].to_s
+                 when 'price_asc' then scope.order(Arel.sql('price ASC NULLS LAST'), created_at: :desc)
+                 when 'price_desc' then scope.order(Arel.sql('price DESC NULLS LAST'), created_at: :desc)
+                 when 'oldest' then scope.order(created_at: :asc)
+                 when 'newest' then scope.order(created_at: :desc)
+                 else scope.order(created_at: :desc)
+                 end
 
-        api_success(data: { properties: properties.map { |p| property_response(p) } }, status: :ok)
+        page, per_page, offset = pagination_params(default_per_page: 20, max_per_page: 100)
+        total_count = sorted.count
+        total_pages = (total_count.to_f / per_page).ceil
+        properties = sorted.limit(per_page).offset(offset)
+
+        api_success(
+          data: {
+            properties: properties.map { |p| property_response(p) },
+            pagination: {
+              page: page,
+              per_page: per_page,
+              total_count: total_count,
+              total_pages: total_pages,
+              has_next_page: page < total_pages,
+              has_prev_page: page > 1
+            }
+          },
+          status: :ok
+        )
+      end
+
+      # GET /api/v1/properties/search?q=keyword
+      # Dedicated search endpoint with suggestions
+      def search
+        term = (params[:q] || params[:search] || params[:query]).to_s.strip
+        if term.blank?
+          api_error(message: 'Search query (q) is required', status: :bad_request)
+          return
+        end
+
+        scope = Property.includes(images_attachments: :blob, video_attachment: :blob)
+
+        if current_user&.role_owner?
+          scope = scope.where('approval_status = ? OR owner_id = ?', 'approved', current_user.id)
+        elsif current_user&.admin?
+          # all
+        else
+          scope = scope.visible_to_public
+        end
+
+        q = "%#{term}%"
+        scope = scope.where(
+          'title ILIKE ? OR description ILIKE ? OR city ILIKE ? OR region ILIKE ? OR country ILIKE ? OR address1 ILIKE ? OR address2 ILIKE ? OR postal_code ILIKE ? OR property_type ILIKE ?',
+          q, q, q, q, q, q, q, q, q
+        )
+
+        page, per_page, offset = pagination_params(default_per_page: 20, max_per_page: 100)
+        total_count = scope.count
+        total_pages = (total_count.to_f / per_page).ceil
+        results = scope.order(created_at: :desc).limit(per_page).offset(offset)
+
+        # Get suggestions for cities and property types matching the term
+        suggestions = {
+          cities: Property.where('city ILIKE ?', q).distinct.limit(10).pluck(:city).compact,
+          regions: Property.where('region ILIKE ?', q).distinct.limit(10).pluck(:region).compact,
+          property_types: Property.where('property_type ILIKE ?', q).distinct.limit(10).pluck(:property_type).compact
+        }
+
+        api_success(
+          data: {
+            query: term,
+            properties: results.map { |p| property_response(p) },
+            suggestions: suggestions,
+            pagination: {
+              page: page,
+              per_page: per_page,
+              total_count: total_count,
+              total_pages: total_pages,
+              has_next_page: page < total_pages,
+              has_prev_page: page > 1
+            }
+          },
+          status: :ok
+        )
       end
 
       # GET /api/v1/properties/form_options
       def form_options
+        current_year = Date.current.year
+
         options = {
           currencies: [
             { value: 'USD', label: 'US Dollar', symbol: '$' },
@@ -146,7 +228,127 @@ module Api
             { value: 'furnished', label: 'Furnished' },
             { value: 'sea_view', label: 'Sea View' },
             { value: 'city_view', label: 'City View' }
-          ]
+          ],
+          furnished_options: [
+            { value: 'furnished', label: 'Furnished' },
+            { value: 'unfurnished', label: 'Unfurnished' },
+            { value: 'semi_furnished', label: 'Semi-Furnished' }
+          ],
+          bedroom_options: [
+            { value: '0', label: 'Studio' },
+            { value: '1', label: '1 Bedroom' },
+            { value: '2', label: '2 Bedrooms' },
+            { value: '3', label: '3 Bedrooms' },
+            { value: '4', label: '4 Bedrooms' },
+            { value: '5', label: '5 Bedrooms' },
+            { value: '6', label: '6 Bedrooms' },
+            { value: '7', label: '7 Bedrooms' },
+            { value: '8+', label: '8+ Bedrooms' }
+          ],
+          bathroom_options: [
+            { value: '1', label: '1 Bathroom' },
+            { value: '2', label: '2 Bathrooms' },
+            { value: '3', label: '3 Bathrooms' },
+            { value: '4', label: '4 Bathrooms' },
+            { value: '5', label: '5 Bathrooms' },
+            { value: '6', label: '6 Bathrooms' },
+            { value: '7+', label: '7+ Bathrooms' }
+          ],
+          parking_options: [
+            { value: '0', label: 'No Parking' },
+            { value: '1', label: '1 Space' },
+            { value: '2', label: '2 Spaces' },
+            { value: '3', label: '3 Spaces' },
+            { value: '4', label: '4 Spaces' },
+            { value: '5+', label: '5+ Spaces' }
+          ],
+          floor_options: [
+            { value: '-2', label: 'Basement 2' },
+            { value: '-1', label: 'Basement 1' },
+            { value: '0', label: 'Ground Floor' },
+            { value: '1', label: '1st Floor' },
+            { value: '2', label: '2nd Floor' },
+            { value: '3', label: '3rd Floor' },
+            { value: '4', label: '4th Floor' },
+            { value: '5', label: '5th Floor' },
+            { value: '6', label: '6th Floor' },
+            { value: '7', label: '7th Floor' },
+            { value: '8', label: '8th Floor' },
+            { value: '9', label: '9th Floor' },
+            { value: '10', label: '10th Floor' },
+            { value: 'penthouse', label: 'Penthouse' }
+          ],
+          area_units: [
+            { value: 'sqft', label: 'Square Feet (sq ft)' },
+            { value: 'sqm', label: 'Square Meters (sq m)' }
+          ],
+          year_built_range: {
+            min: 1900,
+            max: current_year,
+            default: current_year
+          },
+          price_ranges: {
+            sale: [
+              { min: 0, max: 100_000, label: 'Under 100K' },
+              { min: 100_000, max: 250_000, label: '100K - 250K' },
+              { min: 250_000, max: 500_000, label: '250K - 500K' },
+              { min: 500_000, max: 1_000_000, label: '500K - 1M' },
+              { min: 1_000_000, max: 2_500_000, label: '1M - 2.5M' },
+              { min: 2_500_000, max: 5_000_000, label: '2.5M - 5M' },
+              { min: 5_000_000, max: 10_000_000, label: '5M - 10M' },
+              { min: 10_000_000, max: nil, label: 'Above 10M' }
+            ],
+            rent: [
+              { min: 0, max: 500, label: 'Under 500' },
+              { min: 500, max: 1_000, label: '500 - 1K' },
+              { min: 1_000, max: 2_500, label: '1K - 2.5K' },
+              { min: 2_500, max: 5_000, label: '2.5K - 5K' },
+              { min: 5_000, max: 10_000, label: '5K - 10K' },
+              { min: 10_000, max: 25_000, label: '10K - 25K' },
+              { min: 25_000, max: nil, label: 'Above 25K' }
+            ]
+          },
+          listing_statuses: [
+            { value: 'active', label: 'Active' },
+            { value: 'sold', label: 'Sold' },
+            { value: 'archived', label: 'Archived' }
+          ],
+          approval_statuses: [
+            { value: 'draft', label: 'Draft' },
+            { value: 'pending_review', label: 'Pending Review' },
+            { value: 'approved', label: 'Approved' },
+            { value: 'rejected', label: 'Rejected' },
+            { value: 'archived', label: 'Archived' }
+          ],
+          sort_options: [
+            { value: 'newest', label: 'Newest First' },
+            { value: 'oldest', label: 'Oldest First' },
+            { value: 'price_asc', label: 'Price: Low to High' },
+            { value: 'price_desc', label: 'Price: High to Low' }
+          ],
+          countries: [
+            { value: 'AE', label: 'United Arab Emirates', flag: '🇦🇪' },
+            { value: 'SA', label: 'Saudi Arabia', flag: '🇸🇦' },
+            { value: 'IN', label: 'India', flag: '🇮🇳' },
+            { value: 'PK', label: 'Pakistan', flag: '🇵🇰' },
+            { value: 'US', label: 'United States', flag: '🇺🇸' },
+            { value: 'GB', label: 'United Kingdom', flag: '🇬🇧' },
+            { value: 'CA', label: 'Canada', flag: '🇨🇦' },
+            { value: 'AU', label: 'Australia', flag: '🇦🇺' },
+            { value: 'SG', label: 'Singapore', flag: '🇸🇬' },
+            { value: 'QA', label: 'Qatar', flag: '🇶🇦' },
+            { value: 'KW', label: 'Kuwait', flag: '🇰🇼' },
+            { value: 'BH', label: 'Bahrain', flag: '🇧🇭' },
+            { value: 'OM', label: 'Oman', flag: '🇴🇲' },
+            { value: 'EG', label: 'Egypt', flag: '🇪🇬' },
+            { value: 'TR', label: 'Turkey', flag: '🇹🇷' }
+          ],
+          limits: {
+            max_images: 20,
+            max_image_size_mb: 10,
+            max_video_size_mb: 200,
+            max_title_length: 255
+          }
         }
 
         api_success(data: options, status: :ok)
@@ -205,6 +407,7 @@ module Api
       # POST /api/v1/properties/:id/approve
       def approve
         @property.approve!(by: current_user)
+        notify_property_owner(@property, 'Property Approved', "Your property \"#{@property.title}\" has been approved.", 'property_approved')
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property approved', status: :ok)
       end
 
@@ -217,6 +420,7 @@ module Api
         end
 
         @property.reject!(by: current_user, reason: reason)
+        notify_property_owner(@property, 'Property Rejected', "Your property \"#{@property.title}\" was rejected. Reason: #{reason}", 'property_rejected')
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property rejected', status: :ok)
       end
 
@@ -276,6 +480,20 @@ module Api
       end
 
       private
+
+      def notify_property_owner(property, title, body, notification_type)
+        return unless property.owner
+        NotificationService.send_to_user(
+          property.owner,
+          title: title,
+          body: body,
+          notification_type: notification_type,
+          data: { property_id: property.id.to_s },
+          related: property
+        )
+      rescue => e
+        Rails.logger.error "Failed to notify owner: #{e.message}"
+      end
 
       def require_owner!
         return if current_user&.role_owner?

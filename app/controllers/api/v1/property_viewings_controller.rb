@@ -52,6 +52,7 @@ module Api
         viewing.property = @property
 
         if viewing.save
+          notify_owner_of_request(viewing)
           api_success(data: { viewing: viewing_response(viewing) }, message: 'Viewing requested', status: :created)
         else
           api_validation_error(errors: viewing.errors.full_messages)
@@ -65,7 +66,9 @@ module Api
 
       # PATCH /api/v1/viewings/:id (admin only)
       def update
+        previous_status = @viewing.status
         if @viewing.update(viewing_update_params.merge(handled_by_id: current_user.id, handled_at: Time.current))
+          notify_viewing_status_change(@viewing, previous_status) if previous_status != @viewing.status
           api_success(data: { viewing: viewing_response(@viewing.reload, detailed: true) }, message: 'Viewing updated', status: :ok)
         else
           api_validation_error(errors: @viewing.errors.full_messages)
@@ -80,10 +83,51 @@ module Api
         end
 
         @viewing.update!(status: 'cancelled')
+        notify_viewing_status_change(@viewing, 'cancelled_by_user')
         api_success(data: { viewing: viewing_response(@viewing.reload, detailed: true) }, message: 'Viewing cancelled', status: :ok)
       end
 
       private
+
+      def notify_owner_of_request(viewing)
+        return unless viewing.property&.owner
+        return if viewing.property.owner_id == viewing.user_id
+
+        NotificationService.send_to_user(
+          viewing.property.owner,
+          title: 'New Viewing Request',
+          body: "#{viewing.user&.name || 'A user'} requested a viewing for \"#{viewing.property.title}\"",
+          notification_type: 'viewing_requested',
+          data: { viewing_id: viewing.id.to_s, property_id: viewing.property_id.to_s },
+          related: viewing
+        )
+      rescue => e
+        Rails.logger.error "Failed to send notification: #{e.message}"
+      end
+
+      def notify_viewing_status_change(viewing, previous_status)
+        type_map = {
+          'confirmed' => ['viewing_confirmed', 'Viewing Confirmed'],
+          'cancelled' => ['viewing_cancelled', 'Viewing Cancelled'],
+          'completed' => ['viewing_completed', 'Viewing Completed']
+        }
+        info = type_map[viewing.status]
+        return unless info
+
+        notification_type, title = info
+        body = "Your viewing for \"#{viewing.property&.title}\" is now #{viewing.status}."
+
+        NotificationService.send_to_user(
+          viewing.user,
+          title: title,
+          body: body,
+          notification_type: notification_type,
+          data: { viewing_id: viewing.id.to_s, property_id: viewing.property_id.to_s },
+          related: viewing
+        )
+      rescue => e
+        Rails.logger.error "Failed to send notification: #{e.message}"
+      end
 
       def authorize_admin!
         return if current_user&.admin?

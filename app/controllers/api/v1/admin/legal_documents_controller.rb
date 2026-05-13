@@ -53,12 +53,6 @@ module Api
 
         private
 
-        def require_admin!
-          return if current_user&.role_admin?
-
-          api_error(message: 'Admin access required', status: :forbidden)
-        end
-
         def legal_document_response(record, kind: nil)
           k = kind || record&.kind
           base = {

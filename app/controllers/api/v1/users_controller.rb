@@ -273,6 +273,32 @@ module Api
         end
       end
       
+      # POST /api/v1/users/me/delete
+      def delete_account
+        reason = params[:reason]
+        additional_feedback = params[:additional_feedback]
+
+        begin
+          user_id = current_user.id
+          current_user.delete_account!(reason: reason, additional_feedback: additional_feedback)
+
+          api_success(
+            message: 'Account deleted successfully',
+            data: {
+              deleted_user_id: user_id,
+              reason: reason,
+              additional_feedback: additional_feedback
+            },
+            status: :ok
+          )
+        rescue ActiveRecord::RecordNotDestroyed, ActiveRecord::InvalidForeignKey => e
+          api_error(message: 'Unable to delete account. Please contact support.', status: :unprocessable_entity)
+        rescue => e
+          Rails.logger.error "Delete account error: #{e.message}"
+          api_error(message: e.message, status: :unprocessable_entity)
+        end
+      end
+
       # POST /api/v1/users/me/reactivate (Admin only or support feature)
       def reactivate
         # This could be admin-only or available to users after certain conditions

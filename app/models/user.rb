@@ -9,6 +9,7 @@ class User < ApplicationRecord
   has_many :devices, dependent: :destroy
   has_many :favorites, dependent: :destroy
   has_many :favorite_properties, through: :favorites, source: :property
+  has_many :owned_properties, class_name: 'Property', foreign_key: 'owner_id', dependent: :destroy
   has_many :property_viewings, dependent: :destroy
   has_many :blocked_users, class_name: 'UserBlock', foreign_key: 'blocker_id', dependent: :destroy
   has_many :blocked_by_users, class_name: 'UserBlock', foreign_key: 'blocked_id', dependent: :destroy
@@ -17,6 +18,7 @@ class User < ApplicationRecord
   has_many :user_reports, foreign_key: 'reporter_id', dependent: :destroy
   has_many :reported_by_users, class_name: 'UserReport', foreign_key: 'reported_id', dependent: :destroy
   has_many :user_deactivations, dependent: :destroy
+  has_many :notifications, dependent: :destroy
 
   # Enums (real-estate app)
   enum :role, { user: 'user', owner: 'owner' }, prefix: true
@@ -243,6 +245,18 @@ class User < ApplicationRecord
       active_deactivation = user_deactivations.active.last
       active_deactivation&.reactivate!(reactivated_by: reactivated_by, notes: notes)
       update!(status: 'active')
+    end
+  end
+
+  def delete_account!(reason: nil, additional_feedback: nil)
+    transaction do
+      profile_picture.purge if profile_picture.attached?
+
+      Rails.logger.info(
+        "Account deletion requested: user_id=#{id} reason=#{normalize_deactivation_reason(reason)}"
+      )
+
+      destroy!
     end
   end
   

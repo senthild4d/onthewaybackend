@@ -28,6 +28,27 @@ class ApplicationController < ActionController::API
     "#{base}#{prefix}"
   end
 
+  # Returns [page, per_page, offset] for the current request.
+  def pagination_params(default_per_page: 20, max_per_page: 100)
+    page = params[:page].to_i
+    page = 1 if page < 1
+
+    requested = params[:per_page].presence || params[:limit].presence
+    per_page = requested.to_i
+    per_page = default_per_page if per_page <= 0
+    per_page = max_per_page if per_page > max_per_page
+
+    offset = (page - 1) * per_page
+    [page, per_page, offset]
+  end
+
+  def require_admin!
+    unless current_user&.admin?
+      api_error(message: 'Admin access required', status: :forbidden)
+      return
+    end
+  end
+
   private
 
   def authenticate_request

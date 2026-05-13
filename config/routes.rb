@@ -38,6 +38,7 @@ Rails.application.routes.draw do
       post 'users/me/unlink_email', to: 'users#unlink_email'
       post 'users/me/unlink_phone', to: 'users#unlink_phone'
       post 'users/me/deactivate', to: 'users#deactivate'
+      post 'users/me/delete', to: 'users#delete_account'
       post 'users/me/reactivate', to: 'users#reactivate'
       
       # OTP Authentication routes
@@ -64,6 +65,11 @@ Rails.application.routes.draw do
       # Password setup
       post 'auth/setup_password', to: 'auth#setup_password'
 
+      # Forgot/Reset password
+      post 'auth/forgot_password', to: 'auth#forgot_password'
+      post 'auth/verify_reset_otp', to: 'auth#verify_reset_otp'
+      post 'auth/reset_password', to: 'auth#reset_password'
+
       # Location management
       get 'location', to: 'locations#show'
       post 'location/device', to: 'locations#device'
@@ -76,6 +82,7 @@ Rails.application.routes.draw do
 
       # Properties (real-estate)
       get 'properties/form_options', to: 'properties#form_options'
+      get 'properties/search', to: 'properties#search'
       resources :properties, except: [:new, :edit] do
         member do
           post 'submit', to: 'properties#submit'
@@ -105,8 +112,41 @@ Rails.application.routes.draw do
       get 'properties/:property_id/viewings', to: 'property_viewings#property_viewings'
       post 'properties/:property_id/viewings', to: 'property_viewings#create'
       
+      # Notifications
+      get 'notifications', to: 'notifications#index'
+      get 'notifications/unread_count', to: 'notifications#unread_count'
+      post 'notifications/mark_all_read', to: 'notifications#mark_all_read'
+      post 'notifications/test', to: 'notifications#test'
+      get 'notifications/:id', to: 'notifications#show'
+      patch 'notifications/:id/mark_read', to: 'notifications#mark_read'
+      delete 'notifications/:id', to: 'notifications#destroy'
+
       # Admin endpoints
       namespace :admin do
+        # Dashboard
+        get 'dashboard/stats', to: 'users#stats'
+
+        # User management
+        get 'users', to: 'users#index'
+        get 'users/:id', to: 'users#show'
+        patch 'users/:id', to: 'users#update'
+        patch 'users/:id/role', to: 'users#update_role'
+        post 'users/:id/promote_admin', to: 'users#promote_admin'
+        post 'users/:id/demote_admin', to: 'users#demote_admin'
+        post 'users/:id/activate', to: 'users#activate'
+        post 'users/:id/deactivate', to: 'users#deactivate'
+        delete 'users/:id', to: 'users#destroy'
+
+        # Property management
+        get 'properties', to: 'properties#index'
+        get 'properties/:id', to: 'properties#show'
+        post 'properties/:id/approve', to: 'properties#approve'
+        post 'properties/:id/reject', to: 'properties#reject'
+        post 'properties/:id/archive', to: 'properties#archive'
+        post 'properties/:id/unarchive', to: 'properties#unarchive'
+        delete 'properties/:id', to: 'properties#destroy'
+
+        # Legal documents
         get 'legal_documents', to: 'legal_documents#index'
         post 'legal_documents/:kind/upload', to: 'legal_documents#upload'
       end

@@ -1,7 +1,7 @@
 module Api
   module V1
     class AuthController < ApplicationController
-      skip_before_action :authenticate_request, only: [:register, :login, :send_otp, :verify_otp, :complete_registration, :authenticate_biometric, :authenticate_pin, :check_device]
+      skip_before_action :authenticate_request, only: [:register, :login, :send_otp, :verify_otp, :complete_registration, :authenticate_biometric, :authenticate_pin, :check_device, :forgot_password, :verify_reset_otp, :reset_password]
 
       # POST /api/v1/auth/register
       def register
@@ -402,6 +402,213 @@ module Api
         Rails.logger.error "Complete Registration Error: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
         api_error(message: 'Failed to complete registration', status: :internal_server_error)
+      end
+
+      # POST /api/v1/auth/forgot_password
+      # Send a password reset OTP to phone or email
+      def forgot_password
+        phone = normalize_phone(params[:phone]) if params[:phone].present?
+        email = params[:email]&.downcase&.strip
+
+        if phone.blank? && email.blank?
+          api_error(message: 'Either phone or email is required', status: :bad_request)
+          return
+        end
+
+        user = if phone.present?
+                 User.find_by(phone: phone)
+               else
+                 User.find_by(email: email)
+               end
+
+        # Always respond success to prevent enumeration attacks
+        unless user
+          api_success(
+            data: { sent: false },
+            message: 'If an account exists, a reset code has been sent',
+            status: :ok
+          )
+          return
+        end
+
+        if user.status_disabled?
+          api_error(message: 'Account is disabled', status: :bad_request)
+          return
+        end
+
+        otp = if phone.present?
+                Otp.create_for_phone(phone)
+              else
+                Otp.create_for_email(email)
+              end
+        otp.update(user: user)
+
+        delivery_success = if phone.present?
+                             SmsService.send_otp(phone, otp.code)
+                           else
+                             EmailService.send_otp(email, otp.code)
+                           end
+
+        if delivery_success
+          api_success(
+            data: {
+              otp: otp.code, # TODO: Remove in production
+              phone: phone,
+              email: email,
+              expires_in: "#{Otp::OTP_EXPIRY_MINUTES} minutes"
+            },
+            message: 'Password reset OTP sent successfully',
+            status: :ok
+          )
+        else
+          api_error(message: 'Failed to send OTP', status: :bad_request)
+        end
+      rescue => e
+        Rails.logger.error "Forgot Password Error: #{e.message}"
+        api_error(message: 'Failed to process request', status: :internal_server_error)
+      end
+
+      # POST /api/v1/auth/verify_reset_otp
+      # Verify the reset OTP and return a reset_token to be used with reset_password
+      def verify_reset_otp
+        phone = normalize_phone(params[:phone]) if params[:phone].present?
+        email = params[:email]&.downcase&.strip
+        code = params[:code]
+
+        if phone.blank? && email.blank?
+          api_error(message: 'Either phone or email is required', status: :bad_request)
+          return
+        end
+
+        if code.blank?
+          api_error(message: 'OTP code is required', status: :bad_request)
+          return
+        end
+
+        otp = if phone.present?
+                Otp.for_phone(phone).where(verified: false).order(created_at: :desc).first
+              else
+                Otp.for_email(email).where(verified: false).order(created_at: :desc).first
+              end
+
+        if otp.nil?
+          api_error(message: 'No OTP found. Please request a new reset code.', status: :bad_request)
+          return
+        end
+
+        if otp.expired?
+          api_error(message: 'OTP has expired. Please request a new one.', status: :bad_request)
+          return
+        end
+
+        if otp.max_attempts_reached?
+          api_error(message: 'Maximum attempts reached. Please request a new OTP.', status: :bad_request)
+          return
+        end
+
+        unless otp.code == code
+          otp.increment_attempts!
+          remaining = Otp::MAX_ATTEMPTS - otp.attempts
+          api_error(
+            message: 'Invalid OTP code',
+            data: { remaining_attempts: remaining },
+            status: :bad_request
+          )
+          return
+        end
+
+        otp.mark_verified!
+
+        user = if phone.present?
+                 User.find_by(phone: phone)
+               else
+                 User.find_by(email: email)
+               end
+
+        unless user
+          api_error(message: 'User not found', status: :not_found)
+          return
+        end
+
+        reset_token = JsonWebToken.encode(
+          user_id: user.id,
+          purpose: 'password_reset',
+          otp_id: otp.id,
+          exp: 15.minutes.from_now.to_i
+        )
+
+        api_success(
+          data: {
+            reset_token: reset_token,
+            expires_in: '15 minutes'
+          },
+          message: 'OTP verified. Use reset_token to set a new password.',
+          status: :ok
+        )
+      rescue => e
+        Rails.logger.error "Verify Reset OTP Error: #{e.message}"
+        api_error(message: 'Failed to verify OTP', status: :internal_server_error)
+      end
+
+      # POST /api/v1/auth/reset_password
+      def reset_password
+        reset_token = params[:reset_token]
+        password = params[:password]
+        password_confirmation = params[:password_confirmation]
+
+        if reset_token.blank?
+          api_error(message: 'Reset token is required', status: :bad_request)
+          return
+        end
+
+        if password.blank?
+          api_error(message: 'Password is required', status: :bad_request)
+          return
+        end
+
+        if password != password_confirmation
+          api_error(message: 'Password and confirmation do not match', status: :bad_request)
+          return
+        end
+
+        if password.length < 8
+          api_error(message: 'Password must be at least 8 characters', status: :bad_request)
+          return
+        end
+
+        begin
+          decoded = JsonWebToken.decode(reset_token)
+          if decoded[:purpose].to_s != 'password_reset'
+            api_error(message: 'Invalid reset token', status: :bad_request)
+            return
+          end
+          user = User.find_by(id: decoded[:user_id])
+        rescue => e
+          api_error(message: 'Invalid or expired reset token', status: :bad_request)
+          return
+        end
+
+        unless user
+          api_error(message: 'User not found', status: :not_found)
+          return
+        end
+
+        if user.update(password: password, password_confirmation: password_confirmation)
+          token = JsonWebToken.encode_persistent(user_id: user.id)
+          api_success(
+            data: {
+              user: user_response(user),
+              token: token
+            },
+            message: 'Password reset successfully',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: user.errors.full_messages)
+        end
+      rescue => e
+        Rails.logger.error "Reset Password Error: #{e.message}"
+        api_error(message: 'Failed to reset password', status: :internal_server_error)
       end
 
       # POST /api/v1/auth/register_device
