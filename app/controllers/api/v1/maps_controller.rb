@@ -218,8 +218,8 @@ module Api
           },
           price: property.price,
           currency: property.currency,
-          images_count: property.images.attached? ? property.images.count : 0,
-          has_video: property.video.attached?
+          images: property.images.map { |img| attachment_url(img) },
+          video: attachment_url(property.video)
         }
       end
     end
