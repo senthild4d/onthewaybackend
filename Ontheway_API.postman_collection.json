@@ -319,6 +319,14 @@
           }
         },
         {
+          "name": "Filter Options (listing filters)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/properties/filter_options", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "filter_options"] }
+          }
+        },
+        {
           "name": "List properties (paginated)",
           "request": {
             "auth": { "type": "noauth" },

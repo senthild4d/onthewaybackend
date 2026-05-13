@@ -1,6 +1,8 @@
 module Api
   module V1
     class MapsController < ApplicationController
+      include PropertySerializable
+
       before_action :require_authentication!, except: [:index, :filter_options]
 
       # GET /api/v1/maps
@@ -200,27 +202,7 @@ module Api
       def map_property_response(property)
         return nil unless property.coordinates?
 
-        {
-          id: property.id,
-          type: 'property',
-          title: property.title,
-          approval_status: property.approval_status,
-          listing_status: property.listing_status,
-          purpose: property.purpose,
-          coordinates: {
-            latitude: property.latitude.to_f,
-            longitude: property.longitude.to_f
-          },
-          address: {
-            city: property.city,
-            country: property.country,
-            full_address: property.full_address
-          },
-          price: property.price,
-          currency: property.currency,
-          images: property.images.map { |img| attachment_url(img) },
-          video: attachment_url(property.video)
-        }
+        property_response(property, detailed: true).merge(type: 'property')
       end
     end
   end

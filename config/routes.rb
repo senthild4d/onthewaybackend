@@ -85,6 +85,7 @@ Rails.application.routes.draw do
 
       # Properties (real-estate)
       get 'properties/form_options', to: 'properties#form_options'
+      get 'properties/filter_options', to: 'properties#filter_options'
       get 'properties/search', to: 'properties#search'
       resources :properties, except: [:new, :edit] do
         member do

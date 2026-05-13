@@ -1,6 +1,8 @@
 module Api
   module V1
     class SearchController < ApplicationController
+      include PropertySerializable
+
       # GET /api/v1/search?q=keyword
       # Optional: purpose, property_type, city, country, min_price, max_price,
       #           min_bedrooms, max_bedrooms, sort_by, page, per_page
@@ -44,7 +46,7 @@ module Api
           data: {
             query: term.presence,
             type: 'properties',
-            properties: results.map { |p| search_property_response(p) },
+            properties: results.map { |p| property_response(p, detailed: true) },
             suggestions: suggestions,
             pagination: pagination_meta(page, per_page, total_count, total_pages)
           },
@@ -142,42 +144,6 @@ module Api
           regions: public_scope.where('region ILIKE ?', q).distinct.limit(10).pluck(:region).compact,
           countries: public_scope.where('country ILIKE ?', q).distinct.limit(10).pluck(:country).compact,
           property_types: public_scope.where('property_type ILIKE ?', q).distinct.limit(10).pluck(:property_type).compact
-        }
-      end
-
-      def search_property_response(property)
-        images = property.images.map { |img| attachment_url(img) }
-        video_url = attachment_url(property.video)
-
-        {
-          id: property.id,
-          title: property.title,
-          description: property.description,
-          property_type: property.property_type,
-          purpose: property.purpose,
-          bedrooms: property.bedrooms,
-          bathrooms: property.bathrooms,
-          area_sqft: property.area_sqft,
-          area_sqm: property.area_sqm,
-          price: property.price,
-          currency: property.currency,
-          approval_status: property.approval_status,
-          listing_status: property.listing_status,
-          features: property.features || {},
-          address: {
-            address1: property.address1,
-            city: property.city,
-            region: property.region,
-            country: property.country,
-            full_address: property.full_address
-          },
-          coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
-          images: images,
-          video: video_url,
-          owner: {
-            id: property.owner_id,
-            name: property.owner&.name
-          }
         }
       end
 

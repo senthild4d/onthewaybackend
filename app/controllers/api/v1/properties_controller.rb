@@ -1,7 +1,9 @@
 module Api
   module V1
     class PropertiesController < ApplicationController
-      before_action :require_authentication!, except: [:index, :show, :form_options, :search]
+      include PropertySerializable
+
+      before_action :require_authentication!, except: [:index, :show, :form_options, :filter_options, :search]
       before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
       before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
@@ -173,185 +175,15 @@ module Api
 
       # GET /api/v1/properties/form_options
       def form_options
-        current_year = Date.current.year
+        api_success(data: PropertyOptions.form_options, status: :ok)
+      end
 
-        options = {
-          currencies: [
-            { value: 'USD', label: 'US Dollar', symbol: '$' },
-            { value: 'EUR', label: 'Euro', symbol: '€' },
-            { value: 'GBP', label: 'British Pound', symbol: '£' },
-            { value: 'AED', label: 'UAE Dirham', symbol: 'د.إ' },
-            { value: 'SAR', label: 'Saudi Riyal', symbol: '﷼' },
-            { value: 'INR', label: 'Indian Rupee', symbol: '₹' },
-            { value: 'PKR', label: 'Pakistani Rupee', symbol: '₨' },
-            { value: 'CAD', label: 'Canadian Dollar', symbol: 'C$' },
-            { value: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
-            { value: 'SGD', label: 'Singapore Dollar', symbol: 'S$' },
-            { value: 'QAR', label: 'Qatari Riyal', symbol: 'ر.ق' },
-            { value: 'KWD', label: 'Kuwaiti Dinar', symbol: 'د.ك' },
-            { value: 'BHD', label: 'Bahraini Dinar', symbol: '.د.ب' },
-            { value: 'OMR', label: 'Omani Rial', symbol: 'ر.ع.' },
-            { value: 'EGP', label: 'Egyptian Pound', symbol: 'E£' },
-            { value: 'TRY', label: 'Turkish Lira', symbol: '₺' }
-          ],
-          purposes: [
-            { value: 'sale', label: 'Sale' },
-            { value: 'rent', label: 'Rent' }
-          ],
-          property_types: [
-            { value: 'apartment', label: 'Apartment' },
-            { value: 'villa', label: 'Villa' },
-            { value: 'townhouse', label: 'Townhouse' },
-            { value: 'penthouse', label: 'Penthouse' },
-            { value: 'studio', label: 'Studio' },
-            { value: 'duplex', label: 'Duplex' },
-            { value: 'land', label: 'Land' },
-            { value: 'office', label: 'Office' },
-            { value: 'shop', label: 'Shop' },
-            { value: 'warehouse', label: 'Warehouse' },
-            { value: 'building', label: 'Building' },
-            { value: 'farm', label: 'Farm' },
-            { value: 'other', label: 'Other' }
-          ],
-          features: [
-            { value: 'balcony', label: 'Balcony' },
-            { value: 'garden', label: 'Garden' },
-            { value: 'pool', label: 'Swimming Pool' },
-            { value: 'gym', label: 'Gym' },
-            { value: 'elevator', label: 'Elevator' },
-            { value: 'security', label: '24/7 Security' },
-            { value: 'parking', label: 'Parking' },
-            { value: 'central_ac', label: 'Central A/C' },
-            { value: 'maid_room', label: "Maid's Room" },
-            { value: 'storage', label: 'Storage Room' },
-            { value: 'pets_allowed', label: 'Pets Allowed' },
-            { value: 'furnished', label: 'Furnished' },
-            { value: 'sea_view', label: 'Sea View' },
-            { value: 'city_view', label: 'City View' }
-          ],
-          furnished_options: [
-            { value: 'furnished', label: 'Furnished' },
-            { value: 'unfurnished', label: 'Unfurnished' },
-            { value: 'semi_furnished', label: 'Semi-Furnished' }
-          ],
-          bedroom_options: [
-            { value: '0', label: 'Studio' },
-            { value: '1', label: '1 Bedroom' },
-            { value: '2', label: '2 Bedrooms' },
-            { value: '3', label: '3 Bedrooms' },
-            { value: '4', label: '4 Bedrooms' },
-            { value: '5', label: '5 Bedrooms' },
-            { value: '6', label: '6 Bedrooms' },
-            { value: '7', label: '7 Bedrooms' },
-            { value: '8+', label: '8+ Bedrooms' }
-          ],
-          bathroom_options: [
-            { value: '1', label: '1 Bathroom' },
-            { value: '2', label: '2 Bathrooms' },
-            { value: '3', label: '3 Bathrooms' },
-            { value: '4', label: '4 Bathrooms' },
-            { value: '5', label: '5 Bathrooms' },
-            { value: '6', label: '6 Bathrooms' },
-            { value: '7+', label: '7+ Bathrooms' }
-          ],
-          parking_options: [
-            { value: '0', label: 'No Parking' },
-            { value: '1', label: '1 Space' },
-            { value: '2', label: '2 Spaces' },
-            { value: '3', label: '3 Spaces' },
-            { value: '4', label: '4 Spaces' },
-            { value: '5+', label: '5+ Spaces' }
-          ],
-          floor_options: [
-            { value: '-2', label: 'Basement 2' },
-            { value: '-1', label: 'Basement 1' },
-            { value: '0', label: 'Ground Floor' },
-            { value: '1', label: '1st Floor' },
-            { value: '2', label: '2nd Floor' },
-            { value: '3', label: '3rd Floor' },
-            { value: '4', label: '4th Floor' },
-            { value: '5', label: '5th Floor' },
-            { value: '6', label: '6th Floor' },
-            { value: '7', label: '7th Floor' },
-            { value: '8', label: '8th Floor' },
-            { value: '9', label: '9th Floor' },
-            { value: '10', label: '10th Floor' },
-            { value: 'penthouse', label: 'Penthouse' }
-          ],
-          area_units: [
-            { value: 'sqft', label: 'Square Feet (sq ft)' },
-            { value: 'sqm', label: 'Square Meters (sq m)' }
-          ],
-          year_built_range: {
-            min: 1900,
-            max: current_year,
-            default: current_year
-          },
-          price_ranges: {
-            sale: [
-              { min: 0, max: 100_000, label: 'Under 100K' },
-              { min: 100_000, max: 250_000, label: '100K - 250K' },
-              { min: 250_000, max: 500_000, label: '250K - 500K' },
-              { min: 500_000, max: 1_000_000, label: '500K - 1M' },
-              { min: 1_000_000, max: 2_500_000, label: '1M - 2.5M' },
-              { min: 2_500_000, max: 5_000_000, label: '2.5M - 5M' },
-              { min: 5_000_000, max: 10_000_000, label: '5M - 10M' },
-              { min: 10_000_000, max: nil, label: 'Above 10M' }
-            ],
-            rent: [
-              { min: 0, max: 500, label: 'Under 500' },
-              { min: 500, max: 1_000, label: '500 - 1K' },
-              { min: 1_000, max: 2_500, label: '1K - 2.5K' },
-              { min: 2_500, max: 5_000, label: '2.5K - 5K' },
-              { min: 5_000, max: 10_000, label: '5K - 10K' },
-              { min: 10_000, max: 25_000, label: '10K - 25K' },
-              { min: 25_000, max: nil, label: 'Above 25K' }
-            ]
-          },
-          listing_statuses: [
-            { value: 'active', label: 'Active' },
-            { value: 'sold', label: 'Sold' },
-            { value: 'archived', label: 'Archived' }
-          ],
-          approval_statuses: [
-            { value: 'draft', label: 'Draft' },
-            { value: 'pending_review', label: 'Pending Review' },
-            { value: 'approved', label: 'Approved' },
-            { value: 'rejected', label: 'Rejected' },
-            { value: 'archived', label: 'Archived' }
-          ],
-          sort_options: [
-            { value: 'newest', label: 'Newest First' },
-            { value: 'oldest', label: 'Oldest First' },
-            { value: 'price_asc', label: 'Price: Low to High' },
-            { value: 'price_desc', label: 'Price: High to Low' }
-          ],
-          countries: [
-            { value: 'AE', label: 'United Arab Emirates', flag: '🇦🇪' },
-            { value: 'SA', label: 'Saudi Arabia', flag: '🇸🇦' },
-            { value: 'IN', label: 'India', flag: '🇮🇳' },
-            { value: 'PK', label: 'Pakistan', flag: '🇵🇰' },
-            { value: 'US', label: 'United States', flag: '🇺🇸' },
-            { value: 'GB', label: 'United Kingdom', flag: '🇬🇧' },
-            { value: 'CA', label: 'Canada', flag: '🇨🇦' },
-            { value: 'AU', label: 'Australia', flag: '🇦🇺' },
-            { value: 'SG', label: 'Singapore', flag: '🇸🇬' },
-            { value: 'QA', label: 'Qatar', flag: '🇶🇦' },
-            { value: 'KW', label: 'Kuwait', flag: '🇰🇼' },
-            { value: 'BH', label: 'Bahrain', flag: '🇧🇭' },
-            { value: 'OM', label: 'Oman', flag: '🇴🇲' },
-            { value: 'EG', label: 'Egypt', flag: '🇪🇬' },
-            { value: 'TR', label: 'Turkey', flag: '🇹🇷' }
-          ],
-          limits: {
-            max_images: 20,
-            max_image_size_mb: 10,
-            max_video_size_mb: 200,
-            max_title_length: 255
-          }
-        }
-
-        api_success(data: options, status: :ok)
+      # GET /api/v1/properties/filter_options
+      def filter_options
+        api_success(
+          data: PropertyOptions.filter_options(admin: current_user&.admin?),
+          status: :ok
+        )
       end
 
       # GET /api/v1/properties/:id
@@ -572,55 +404,6 @@ module Api
         return unless vid.present?
         property.video.purge if replace && property.video.attached?
         property.video.attach(vid)
-      end
-
-      def property_response(property, detailed: false)
-        images = property.images.map { |img| attachment_url(img) }
-        video_url = attachment_url(property.video)
-
-        data = {
-          id: property.id,
-          title: property.title,
-          description: property.description,
-          property_type: property.property_type,
-          purpose: property.purpose,
-          bedrooms: property.bedrooms,
-          bathrooms: property.bathrooms,
-          area_sqft: property.area_sqft,
-          area_sqm: property.area_sqm,
-          price: property.price,
-          currency: property.currency,
-          approval_status: property.approval_status,
-          listing_status: property.listing_status,
-          sold_at: property.sold_at&.iso8601,
-          archived_at: property.archived_at&.iso8601,
-          features: property.features || {},
-          submitted_at: property.submitted_at&.iso8601,
-          approved_at: property.approved_at&.iso8601,
-          rejected_at: property.rejected_at&.iso8601,
-          rejection_reason: property.rejection_reason,
-          address: {
-            address1: property.address1,
-            address2: property.address2,
-            city: property.city,
-            region: property.region,
-            postal_code: property.postal_code,
-            country: property.country,
-            full_address: property.full_address
-          },
-          coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
-          images: images,
-          video: video_url
-        }
-
-        if detailed
-          data[:owner] = {
-            id: property.owner_id,
-            name: property.owner&.name
-          }
-        end
-
-        data
       end
     end
   end
