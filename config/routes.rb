@@ -80,6 +80,9 @@ Rails.application.routes.draw do
       get 'maps', to: 'maps#index'
       get 'maps/filter_options', to: 'maps#filter_options'
 
+      # Search
+      get 'search', to: 'search#index'
+
       # Properties (real-estate)
       get 'properties/form_options', to: 'properties#form_options'
       get 'properties/search', to: 'properties#search'

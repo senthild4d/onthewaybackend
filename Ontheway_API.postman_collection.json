@@ -507,6 +507,74 @@
       ]
     },
     {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search properties",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/search?q=apartment&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search"],
+              "query": [
+                { "key": "q", "value": "apartment" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" },
+                { "key": "purpose", "value": "sale", "disabled": true },
+                { "key": "property_type", "value": "apartment", "disabled": true },
+                { "key": "city", "value": "Dubai", "disabled": true },
+                { "key": "country", "value": "AE", "disabled": true },
+                { "key": "min_price", "value": "100000", "disabled": true },
+                { "key": "max_price", "value": "5000000", "disabled": true },
+                { "key": "min_bedrooms", "value": "1", "disabled": true },
+                { "key": "max_bedrooms", "value": "5", "disabled": true },
+                { "key": "sort_by", "value": "price_asc", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search with filters only (no query)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/search?purpose=sale&city=Dubai&min_bedrooms=2&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search"],
+              "query": [
+                { "key": "purpose", "value": "sale" },
+                { "key": "city", "value": "Dubai" },
+                { "key": "min_bedrooms", "value": "2" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search owners/brokers",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/search?q=real estate&type=owners&page=1&per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "search"],
+              "query": [
+                { "key": "q", "value": "real estate" },
+                { "key": "type", "value": "owners" },
+                { "key": "page", "value": "1" },
+                { "key": "per_page", "value": "20" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Favorites",
       "item": [
         {
