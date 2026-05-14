@@ -43,6 +43,8 @@ class Property < ApplicationRecord
   validate :video_content_type
   validate :features_format
 
+  before_validation :normalize_features_values
+
   scope :visible_to_public, -> { where(approval_status: 'approved', listing_status: 'active') }
 
   def coordinates?
@@ -133,6 +135,15 @@ class Property < ApplicationRecord
     return if features.blank?
     return if features.is_a?(Hash)
     errors.add(:features, 'must be an object')
+  end
+
+  def normalize_features_values
+    return if features.blank?
+
+    boolean = ActiveModel::Type::Boolean.new
+    self.features = features.each_with_object({}) do |(key, value), result|
+      result[key.to_s] = boolean.cast(value)
+    end
   end
 end
 

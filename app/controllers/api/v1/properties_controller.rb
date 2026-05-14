@@ -101,6 +101,7 @@ module Api
         total_count = sorted.count
         total_pages = (total_count.to_f / per_page).ceil
         properties = sorted.limit(per_page).offset(offset)
+        preload_favorite_property_ids!(properties)
 
         api_success(
           data: {
@@ -147,6 +148,7 @@ module Api
         total_count = scope.count
         total_pages = (total_count.to_f / per_page).ceil
         results = scope.order(created_at: :desc).limit(per_page).offset(offset)
+        preload_favorite_property_ids!(results)
 
         # Get suggestions for cities and property types matching the term
         suggestions = {

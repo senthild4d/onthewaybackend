@@ -3,6 +3,35 @@ module PropertySerializable
 
   private
 
+  def preload_favorite_property_ids!(properties)
+    @favorite_property_ids =
+      if current_user
+        property_ids = Array(properties).map(&:id)
+        current_user.favorites.where(property_id: property_ids).pluck(:property_id).to_set
+      else
+        Set.new
+      end
+  end
+
+  def property_favorited?(property)
+    return false unless current_user
+
+    if @favorite_property_ids
+      @favorite_property_ids.include?(property.id)
+    else
+      current_user.favorites.exists?(property_id: property.id)
+    end
+  end
+
+  def normalize_features(features)
+    return {} if features.blank?
+
+    boolean = ActiveModel::Type::Boolean.new
+    features.each_with_object({}) do |(key, value), result|
+      result[key.to_s] = boolean.cast(value)
+    end
+  end
+
   def property_response(property, detailed: false)
     images = property.images.map { |img| attachment_url(img) }
     video_url = attachment_url(property.video)
@@ -28,7 +57,8 @@ module PropertySerializable
       listing_status: property.listing_status,
       sold_at: property.sold_at&.iso8601,
       archived_at: property.archived_at&.iso8601,
-      features: property.features || {},
+      features: normalize_features(property.features),
+      is_favorited: property_favorited?(property),
       submitted_at: property.submitted_at&.iso8601,
       approved_at: property.approved_at&.iso8601,
       rejected_at: property.rejected_at&.iso8601,

@@ -39,6 +39,7 @@ module Api
         total_count = scope.count
         total_pages = (total_count.to_f / per_page).ceil
         results = scope.limit(per_page).offset(offset)
+        preload_favorite_property_ids!(results)
 
         suggestions = term.present? ? build_suggestions(term) : {}
 

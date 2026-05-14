@@ -10,6 +10,7 @@ module Api
         properties = fetch_properties
         properties_array = properties.is_a?(Array) ? properties : properties.to_a
         items_for_bounds = properties_array
+        preload_favorite_property_ids!(properties_array)
 
         map_data = {
           properties: properties_array.map { |p| map_property_response(p) }.compact,

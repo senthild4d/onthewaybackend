@@ -1,12 +1,17 @@
 module Api
   module V1
     class FavoritesController < ApplicationController
+      include PropertySerializable
+
       before_action :require_authentication!
       before_action :set_property, only: [:create, :destroy]
 
       # GET /api/v1/favorites
       def index
-        favorites = current_user.favorites.includes(property: [images_attachments: :blob, video_attachment: :blob]).order(created_at: :desc)
+        favorites = current_user.favorites
+          .includes(property: [:owner, images_attachments: :blob, video_attachment: :blob])
+          .order(created_at: :desc)
+        preload_favorite_property_ids!(favorites.map(&:property))
         api_success(
           data: {
             favorites: favorites.map { |f| favorite_response(f) }
@@ -19,6 +24,10 @@ module Api
       def create
         fav = current_user.favorites.find_or_initialize_by(property_id: @property.id)
         if fav.save
+          fav = current_user.favorites
+            .includes(property: [:owner, images_attachments: :blob, video_attachment: :blob])
+            .find(fav.id)
+          preload_favorite_property_ids!([fav.property])
           api_success(data: { favorite: favorite_response(fav) }, message: 'Added to favorites', status: :ok)
         else
           api_validation_error(errors: fav.errors.full_messages)
@@ -48,8 +57,8 @@ module Api
       def favorite_response(fav)
         {
           id: fav.id,
-          property_id: fav.property_id,
-          created_at: fav.created_at&.iso8601
+          created_at: fav.created_at&.iso8601,
+          property: property_response(fav.property, detailed: true).merge(type: 'property')
         }
       end
     end
