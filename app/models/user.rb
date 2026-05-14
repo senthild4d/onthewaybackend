@@ -49,6 +49,7 @@ class User < ApplicationRecord
   }, if: -> { password.present? && password_required? }
   validates :role, presence: true, inclusion: { in: roles.keys }
   validates :status, presence: true, inclusion: { in: statuses.keys }
+  validates :uniq_identifier, presence: true, uniqueness: true
 
   # Password is optional for OTP-based authentication (phone or email)
   def password_required?
@@ -57,6 +58,7 @@ class User < ApplicationRecord
   end
 
   # Callbacks
+  before_validation :assign_uniq_identifier, if: -> { uniq_identifier.blank? }
   before_validation :downcase_email
   before_validation :normalize_phone
 
@@ -84,6 +86,10 @@ class User < ApplicationRecord
   end
 
   private
+
+  def assign_uniq_identifier
+    self.uniq_identifier = UserIdentifierGenerator.generate
+  end
 
   def downcase_email
     self.email = email.downcase if email.present?

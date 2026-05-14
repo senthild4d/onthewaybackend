@@ -307,6 +307,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_014741) do
     t.boolean "is_admin", default: false, null: false
     t.text "description"
     t.text "address"
+    t.string "uniq_identifier", null: false
     t.index ["created_at"], name: "index_users_on_created_at"
     t.index ["email"], name: "index_users_on_email", unique: true
     t.index ["is_admin"], name: "index_users_on_is_admin"
@@ -314,6 +315,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_014741) do
     t.index ["role"], name: "index_users_on_role"
     t.index ["status"], name: "index_users_on_status"
     t.index ["username"], name: "index_users_on_username", unique: true, where: "(username IS NOT NULL)"
+    t.index ["uniq_identifier"], name: "index_users_on_uniq_identifier", unique: true
     t.check_constraint "email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'::text", name: "check_email_format"
     t.check_constraint "phone IS NOT NULL OR email IS NOT NULL", name: "check_user_phone_or_email"
     t.check_constraint "role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying]::text[])", name: "check_role"

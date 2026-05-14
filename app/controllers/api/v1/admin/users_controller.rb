@@ -220,6 +220,7 @@ module Api
 
           data = {
             id: user.id,
+            uniq_identifier: user.uniq_identifier,
             email: user.email,
             phone: user.phone,
             username: user.username,

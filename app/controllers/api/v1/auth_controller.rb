@@ -1279,6 +1279,7 @@ module Api
       def user_response(user)
         {
           id: user.id,
+          uniq_identifier: user.uniq_identifier,
           email: user.email,
           phone: user.phone,
           name: user.name,

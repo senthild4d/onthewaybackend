@@ -52,6 +52,7 @@ module PropertySerializable
     if detailed
       data[:owner] = {
         id: property.owner_id,
+        uniq_identifier: property.owner&.uniq_identifier,
         name: property.owner&.name,
         phone: property.owner&.phone,
         email: property.owner&.email

@@ -107,6 +107,7 @@ module Api
       def user_basic_response(user)
         {
           id: user.id,
+          uniq_identifier: user.uniq_identifier,
           name: user.name,
           username: user.username,
           role: user.role,
