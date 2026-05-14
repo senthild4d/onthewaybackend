@@ -103,6 +103,19 @@ class Property < ApplicationRecord
     [address1, address2, city, region, postal_code, country].compact.join(', ')
   end
 
+  def normalized_features
+    self.class.normalize_features_hash(features)
+  end
+
+  def self.normalize_features_hash(features)
+    return {} if features.blank?
+
+    boolean = ActiveModel::Type::Boolean.new
+    features.each_with_object({}) do |(key, value), result|
+      result[key.to_s] = boolean.cast(value)
+    end
+  end
+
   private
 
   def images_count_limit
@@ -140,10 +153,7 @@ class Property < ApplicationRecord
   def normalize_features_values
     return if features.blank?
 
-    boolean = ActiveModel::Type::Boolean.new
-    self.features = features.each_with_object({}) do |(key, value), result|
-      result[key.to_s] = boolean.cast(value)
-    end
+    self.features = self.class.normalize_features_hash(features)
   end
 end
 

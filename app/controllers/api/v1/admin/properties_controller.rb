@@ -128,7 +128,7 @@ module Api
             currency: property.currency,
             approval_status: property.approval_status,
             listing_status: property.listing_status,
-            features: property.features || {},
+            features: property.normalized_features,
             address: {
               address1: property.address1,
               address2: property.address2,

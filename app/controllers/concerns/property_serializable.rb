@@ -24,12 +24,7 @@ module PropertySerializable
   end
 
   def normalize_features(features)
-    return {} if features.blank?
-
-    boolean = ActiveModel::Type::Boolean.new
-    features.each_with_object({}) do |(key, value), result|
-      result[key.to_s] = boolean.cast(value)
-    end
+    Property.normalize_features_hash(features)
   end
 
   def property_response(property, detailed: false)
@@ -57,7 +52,7 @@ module PropertySerializable
       listing_status: property.listing_status,
       sold_at: property.sold_at&.iso8601,
       archived_at: property.archived_at&.iso8601,
-      features: normalize_features(property.features),
+      features: property.normalized_features,
       is_favorited: property_favorited?(property),
       submitted_at: property.submitted_at&.iso8601,
       approved_at: property.approved_at&.iso8601,
