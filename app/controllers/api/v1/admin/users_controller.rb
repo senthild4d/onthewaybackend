@@ -14,7 +14,7 @@ module Api
 
           scope = scope.where(role: Array(params[:role])) if params[:role].present?
           scope = scope.where(status: Array(params[:status])) if params[:status].present?
-          scope = scope.where(is_admin: true) if params[:admins_only].to_s == 'true'
+          scope = scope.admins if params[:admins_only].to_s == 'true'
 
           if params[:q].present? || params[:search].present?
             term = (params[:q] || params[:search]).to_s.strip
@@ -60,8 +60,8 @@ module Api
         # PATCH /api/v1/admin/users/:id/role
         def update_role
           role = params[:role].to_s
-          unless %w[user owner].include?(role)
-            api_error(message: 'Invalid role. Allowed: user, owner', status: :bad_request)
+          unless %w[user owner admin].include?(role)
+            api_error(message: 'Invalid role. Allowed: user, owner, admin', status: :bad_request)
             return
           end
 
@@ -78,7 +78,7 @@ module Api
 
         # POST /api/v1/admin/users/:id/promote_admin
         def promote_admin
-          if @user.update(is_admin: true)
+          if @user.update(role: 'admin', is_admin: true)
             api_success(
               data: { user: admin_user_response(@user.reload, detailed: true) },
               message: 'User promoted to admin',
@@ -96,7 +96,7 @@ module Api
             return
           end
 
-          if @user.update(is_admin: false)
+          if @user.update(role: 'user', is_admin: false)
             api_success(
               data: { user: admin_user_response(@user.reload, detailed: true) },
               message: 'Admin privileges revoked',
@@ -162,7 +162,7 @@ module Api
               disabled: User.where(status: 'disabled').count,
               owners: User.where(role: 'owner').count,
               regular_users: User.where(role: 'user').count,
-              admins: User.where(is_admin: true).count
+              admins: User.admins.count
             },
             properties: {
               total: Property.count,

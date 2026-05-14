@@ -21,11 +21,11 @@ class User < ApplicationRecord
   has_many :notifications, dependent: :destroy
 
   # Enums (real-estate app)
-  enum :role, { user: 'user', owner: 'owner' }, prefix: true
+  enum :role, { user: 'user', owner: 'owner', admin: 'admin' }, prefix: true
   enum :status, { active: 'active', disabled: 'disabled' }, prefix: true
 
   def admin?
-    is_admin == true
+    role_admin? || is_admin == true
   end
 
   store_accessor :current_location, :lat, :lng, :formatted_address, :place_id, :source, :recorded_at
@@ -61,12 +61,13 @@ class User < ApplicationRecord
   before_validation :assign_uniq_identifier, if: -> { uniq_identifier.blank? }
   before_validation :downcase_email
   before_validation :normalize_phone
+  before_validation :sync_admin_role_flag
 
   # Scopes
   scope :active, -> { where(status: 'active') }
   scope :users, -> { where(role: 'user') }
   scope :owners, -> { where(role: 'owner') }
-  scope :admins, -> { where(is_admin: true) }
+  scope :admins, -> { where(role: 'admin').or(where(is_admin: true)) }
 
   def current_location_snapshot
     location_data = current_location.presence || {}
@@ -98,6 +99,14 @@ class User < ApplicationRecord
   def normalize_phone
     # Remove all non-digit characters from phone
     self.phone = phone.gsub(/\D/, '') if phone.present?
+  end
+
+  def sync_admin_role_flag
+    if role_admin?
+      self.is_admin = true
+    elsif role_changed? && !role_admin?
+      self.is_admin = false
+    end
   end
 
   def phone_or_email_present

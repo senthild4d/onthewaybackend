@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_13_014741) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_14_110000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -314,11 +314,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_13_014741) do
     t.index ["phone"], name: "index_users_on_phone", unique: true, where: "(phone IS NOT NULL)"
     t.index ["role"], name: "index_users_on_role"
     t.index ["status"], name: "index_users_on_status"
-    t.index ["username"], name: "index_users_on_username", unique: true, where: "(username IS NOT NULL)"
     t.index ["uniq_identifier"], name: "index_users_on_uniq_identifier", unique: true
+    t.index ["username"], name: "index_users_on_username", unique: true, where: "(username IS NOT NULL)"
     t.check_constraint "email::text ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$'::text", name: "check_email_format"
     t.check_constraint "phone IS NOT NULL OR email IS NOT NULL", name: "check_user_phone_or_email"
-    t.check_constraint "role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying]::text[])", name: "check_role"
+    t.check_constraint "role::text = ANY (ARRAY['user'::character varying, 'owner'::character varying, 'admin'::character varying]::text[])", name: "check_role"
     t.check_constraint "status::text = ANY (ARRAY['active'::character varying::text, 'disabled'::character varying::text])", name: "check_status"
   end
 

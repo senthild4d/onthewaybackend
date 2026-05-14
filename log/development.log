@@ -1651,3 +1651,29 @@ FOREIGN KEY ("user_id")
   [1m[36mTRANSACTION (1.2ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
   [1m[35m (0.2ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
   [1m[36mActiveRecord::SchemaMigration Load (1.1ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[34mSELECT pg_try_advisory_lock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (5.8ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (4.0ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+Migrating to AddUniqIdentifierToUsers (20260514100000)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (8.0ms)[0m  [1m[35mALTER TABLE "users" ADD "uniq_identifier" character varying /*application='Vibes'*/[0m
+  [1m[35m (6.1ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_users_on_uniq_identifier" ON "users" ("uniq_identifier") /*application='Vibes'*/[0m
+  [1m[36mUser Load (4.2ms)[0m  [1m[34mSELECT "users".* FROM "users" ORDER BY "users"."id" ASC LIMIT 1000 /*application='Vibes'*/[0m
+  [1m[35m (4.0ms)[0m  [1m[35mALTER TABLE "users" ALTER COLUMN "uniq_identifier" SET NOT NULL /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.3ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260514100000') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (1.4ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+Migrating to AddAdminRoleToUsers (20260514110000)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (3.7ms)[0m  [1m[35mALTER TABLE users DROP CONSTRAINT IF EXISTS check_role /*application='Vibes'*/[0m
+  [1m[35m (1.4ms)[0m  [1m[33mUPDATE users
+SET role = 'admin'
+WHERE is_admin = TRUE AND role != 'admin';
+ /*application='Vibes'*/[0m
+  [1m[35m (0.9ms)[0m  [1m[35mALTER TABLE users
+ADD CONSTRAINT check_role
+CHECK (role IN ('user', 'owner', 'admin'))
+ /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260514110000') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (0.3ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+  [1m[35m (0.1ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (1.5ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
