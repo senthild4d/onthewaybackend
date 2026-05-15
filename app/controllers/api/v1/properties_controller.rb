@@ -4,7 +4,7 @@ module Api
       include PropertySerializable
 
       before_action :require_authentication!, except: [:index, :show, :form_options, :filter_options, :search]
-      before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :upload_images, :upload_video, :remove_image, :remove_video]
+      before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :mark_sold, :archive, :unarchive, :upload_images, :upload_video, :remove_image, :remove_video]
       before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
       before_action :authorize_owner_or_admin!, only: [:mark_sold, :archive, :unarchive]
@@ -336,10 +336,10 @@ module Api
 
       def set_property
         @property = Property.find_by(id: params[:id])
-        unless @property
-          api_error(message: 'Property not found', status: :not_found)
-          return
-        end
+        return if @property
+
+        api_error(message: 'Property not found', status: :not_found)
+        false
       end
 
       def authorize_owner_or_staff!
