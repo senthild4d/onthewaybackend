@@ -344,32 +344,36 @@ module Api
 
       def authorize_owner_or_staff!
         return if current_user&.admin?
-        return if @property.owner_id == current_user&.id
+        return if current_user_owns_property?
 
-        api_error(message: 'Unauthorized', status: :forbidden)
+        api_error(message: 'You can only manage your own properties', status: :forbidden)
         false
       end
 
       def authorize_staff!
         return if current_user&.admin?
 
-        api_error(message: 'Unauthorized', status: :forbidden)
+        api_error(message: 'Only administrators can perform this action', status: :forbidden)
         false
       end
 
       def authorize_owner_or_admin!
         return if current_user&.admin?
-        return if @property.owner_id == current_user&.id
+        return if current_user_owns_property?
 
-        api_error(message: 'Unauthorized', status: :forbidden)
+        api_error(message: 'You can only manage your own properties', status: :forbidden)
         false
+      end
+
+      def current_user_owns_property?
+        current_user&.owns_property?(@property)
       end
 
       def can_view_property?(property)
         return true if property.approval_status_approved?
         return false if current_user.nil?
         return true if current_user.admin?
-        property.owner_id == current_user.id
+        current_user.owns_property?(property)
       end
 
       def property_params

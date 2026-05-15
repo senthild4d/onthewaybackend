@@ -28,6 +28,12 @@ class User < ApplicationRecord
     role_admin? || is_admin == true
   end
 
+  def owns_property?(property)
+    return false if property.blank?
+
+    owned_properties.exists?(id: property.id)
+  end
+
   store_accessor :current_location, :lat, :lng, :formatted_address, :place_id, :source, :recorded_at
 
   # Validations
