@@ -27,8 +27,16 @@ module PropertySerializable
     Property.normalize_features_hash(features)
   end
 
+  def property_images_response(property)
+    property.images.attachments.map do |attachment|
+      {
+        id: attachment.id,
+        url: attachment_url(attachment)
+      }
+    end
+  end
+
   def property_response(property, detailed: false)
-    images = property.images.map { |img| attachment_url(img) }
     video_url = attachment_url(property.video)
 
     data = {
@@ -68,7 +76,7 @@ module PropertySerializable
         full_address: property.full_address
       },
       coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
-      images: images,
+      images: property_images_response(property),
       video: video_url,
       created_at: property.created_at&.iso8601,
       updated_at: property.updated_at&.iso8601

@@ -667,6 +667,7 @@ module Api
           name: user.name,
           date_of_birth: user.date_of_birth,
           role: user.role,
+          is_admin: user.admin?,
           status: user.status,
           avatar_url: avatar,
           profile_picture_url: avatar,

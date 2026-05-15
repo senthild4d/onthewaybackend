@@ -4,6 +4,8 @@ module Api
   module V1
     module Admin
       class PropertiesController < ApplicationController
+        include PropertySerializable
+
         before_action :require_authentication!
         before_action :require_admin!
         before_action :set_property, only: [:show, :approve, :reject, :archive, :unarchive, :destroy]
@@ -111,7 +113,6 @@ module Api
         end
 
         def admin_property_response(property, detailed: false)
-          images = property.images.map { |img| attachment_url(img) }
           video_url = attachment_url(property.video)
 
           data = {
@@ -139,7 +140,7 @@ module Api
               full_address: property.full_address
             },
             coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
-            images: images,
+            images: property_images_response(property),
             video: video_url,
             submitted_at: property.submitted_at&.iso8601,
             approved_at: property.approved_at&.iso8601,
