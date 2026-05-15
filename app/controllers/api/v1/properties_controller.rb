@@ -15,7 +15,7 @@ module Api
 
         # Public users only see approved listings. Owners can see their own drafts too.
         if current_user&.role_owner?
-          scope = scope.where('approval_status = ? OR owner_id = ?', 'approved', current_user.id)
+          scope = scope.where('owner_id = ?', current_user.id)
         elsif current_user&.admin?
           # staff sees all
         else
