@@ -401,6 +401,7 @@ module Api
           :total_floors,
           :furnished,
           :parking_spaces,
+          :video_projection,
           features: {}
         )
       end

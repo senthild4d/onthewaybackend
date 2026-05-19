@@ -142,6 +142,8 @@ module Api
             coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
             images: property_images_response(property),
             video: video_url,
+            video_projection: property.video_projection,
+            immersive_video_view_url: immersive_property_video_view_url(property, video_url),
             submitted_at: property.submitted_at&.iso8601,
             approved_at: property.approved_at&.iso8601,
             rejected_at: property.rejected_at&.iso8601,

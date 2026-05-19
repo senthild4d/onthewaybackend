@@ -1688,3 +1688,14 @@ Migrating to NormalizePropertyFeaturesBooleans (20260514120000)
   [1m[36mTRANSACTION (1.5ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
   [1m[35m (0.1ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
   [1m[36mActiveRecord::SchemaMigration Load (1.1ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[35m (1.2ms)[0m  [1m[34mSELECT pg_try_advisory_lock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (8.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::InternalMetadata Load (3.9ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = 'environment' ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1 /*application='Vibes'*/[0m
+Migrating to AddVideoProjectionToProperties (20260518120000)
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN /*application='Vibes'*/[0m
+  [1m[35m (22.2ms)[0m  [1m[35mALTER TABLE "properties" ADD "video_projection" character varying DEFAULT 'flat' NOT NULL /*application='Vibes'*/[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE properties ADD CONSTRAINT check_properties_video_projection CHECK (video_projection IN ('flat', 'equirectangular')) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Create (0.8ms)[0m  [1m[32mINSERT INTO "schema_migrations" ("version") VALUES ('20260518120000') RETURNING "version" /*application='Vibes'*/[0m
+  [1m[36mTRANSACTION (1.7ms)[0m  [1m[35mCOMMIT /*application='Vibes'*/[0m
+  [1m[35m (0.2ms)[0m  [1m[34mSELECT pg_advisory_unlock(7846575475737410370) /*application='Vibes'*/[0m
+  [1m[36mActiveRecord::SchemaMigration Load (1.7ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC /*application='Vibes'*/[0m

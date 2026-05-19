@@ -2,7 +2,7 @@
   "info": {
     "name": "RealEstate API - Auth + Properties",
     "_postman_id": "real-estate-api-collection-v1",
-    "description": "Real-estate backend API collection\n\n## Roles\nAllowed roles: user, owner\nAdmin is a flag: users.is_admin=true\n\n## Base URL\nSet `{{base_url}}` (example: http://localhost:3000)\n\n## Auth\nMost requests use Bearer token `{{jwt_token}}`.\n\n## Main resources\n- Auth (OTP)\n- Profile\n- Properties (CRUD + media + approval + lifecycle)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n",
+    "description": "Real-estate backend API collection\n\n## Roles\nAllowed `role` values: `user`, `owner`, `admin`. Admin access: `role=admin` **or** `is_admin=true` on the user.\n\n## Base URL\nSet `{{base_url}}` (example: `https://vibesapp.digital4design.com/ontheway` or `http://localhost:3000`).\n\n## Auth\nMost requests use Bearer `{{jwt_token}}`.\n\n## Property responses (list / show / map / favorites / admin)\n- `images`: `[{ \"id\": \"uuid\", \"url\": \"...\" }]` — use `id` for `DELETE .../images/:image_id`\n- `video`, `video_projection` (`flat` | `equirectangular`), `immersive_video_view_url` (360° WebView URL when equirectangular + video present)\n- `features`: boolean values (e.g. `balcony: true`)\n- `is_favorited`: when logged in\n\n## Favorites\n`GET /favorites` returns `{ id, created_at, property: { ...full property + type } }`.\n\n## Main resources\n- Auth (OTP)\n- Profile\n- Properties (CRUD + media + approval + lifecycle + 360° video metadata)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n- Admin (users, properties)\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -311,7 +311,7 @@
       "name": "Properties",
       "item": [
         {
-          "name": "Form Options (currencies, purposes, types)",
+          "name": "Form Options (currencies, purposes, types, video_projections, …)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
@@ -327,7 +327,7 @@
           }
         },
         {
-          "name": "List properties (paginated)",
+          "name": "List properties (Bearer optional: is_favorited; owner role sees own drafts)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
@@ -390,6 +390,7 @@
                 { "key": "property[longitude]", "value": "72.8777", "type": "text" },
                 { "key": "property[price]", "value": "12000000", "type": "text" },
                 { "key": "property[currency]", "value": "INR", "type": "text" },
+                { "key": "property[video_projection]", "value": "flat", "type": "text" },
                 { "key": "property[features][elevator]", "value": "true", "type": "text" },
                 { "key": "property[features][balcony]", "value": "true", "type": "text" },
                 { "key": "images[]", "type": "file", "src": "" },
@@ -415,7 +416,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"property\": {\n    \"title\": \"Updated Title\",\n    \"price\": 15000000\n  }\n}"
+              "raw": "{\n  \"property\": {\n    \"title\": \"Updated Title\",\n    \"price\": 15000000,\n    \"video_projection\": \"equirectangular\"\n  }\n}"
             },
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}"] }
           }
@@ -486,7 +487,7 @@
           }
         },
         {
-          "name": "Remove property image",
+          "name": "Remove property image (image_id from GET property images[].id)",
           "request": {
             "method": "DELETE",
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/images/{{image_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "images", "{{image_id}}"] }
@@ -503,6 +504,18 @@
               ]
             },
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "video"] }
+          }
+        },
+        {
+          "name": "Update property — video_projection only (flat vs 360°)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"property\": {\n    \"video_projection\": \"equirectangular\"\n  }\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}"] }
           }
         },
         {
@@ -586,7 +599,7 @@
       "name": "Favorites",
       "item": [
         {
-          "name": "List my favorites",
+          "name": "List my favorites (nested full property + is_favorited)",
           "request": {
             "method": "GET",
             "url": { "raw": "{{base_url}}/api/v1/favorites", "host": ["{{base_url}}"], "path": ["api", "v1", "favorites"] }
@@ -709,7 +722,7 @@
       "name": "Map",
       "item": [
         {
-          "name": "Map markers (properties only)",
+          "name": "Map markers (detailed properties: images id+url, is_favorited if Bearer)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",

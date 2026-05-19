@@ -20,6 +20,7 @@ class PropertyOptions
         approval_statuses: approval_statuses,
         sort_options: sort_options,
         countries: countries,
+        video_projections: video_projections,
         limits: {
           max_images: 20,
           max_image_size_mb: 10,
@@ -89,6 +90,7 @@ class PropertyOptions
     def currencies
       [
         { value: 'USD', label: 'US Dollar', symbol: '$' },
+        { value: 'USDT', label: 'Tether (USDT)', symbol: 'USDT' },
         { value: 'EUR', label: 'Euro', symbol: '€' },
         { value: 'GBP', label: 'British Pound', symbol: '£' },
         { value: 'AED', label: 'UAE Dirham', symbol: 'د.إ' },
@@ -110,7 +112,7 @@ class PropertyOptions
     def purposes
       [
         { value: 'sale', label: 'Sale' },
-        { value: 'rent', label: 'Rent' }
+        { value: 'rent', label: 'Rent to Buy' }
       ]
     end
 
@@ -272,6 +274,13 @@ class PropertyOptions
         { value: 'approved', label: 'Approved' },
         { value: 'rejected', label: 'Rejected' },
         { value: 'archived', label: 'Archived' }
+      ]
+    end
+
+    def video_projections
+      [
+        { value: 'flat', label: 'Standard video' },
+        { value: 'equirectangular', label: '360° / equirectangular (2:1)' }
       ]
     end
 

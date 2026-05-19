@@ -20,12 +20,15 @@ class Property < ApplicationRecord
 
   enum :purpose, { sale: 'sale', rent: 'rent' }, prefix: true
   enum :listing_status, { active: 'active', sold: 'sold', archived: 'archived' }, prefix: true
+  # Same values as moments.projection — equirectangular 2:1 video for venue_360_viewer.html
+  enum :video_projection, { flat: 'flat', equirectangular: 'equirectangular' }, prefix: true
 
   validates :title, presence: true, length: { maximum: 255 }
   validates :currency, presence: true
   validates :approval_status, inclusion: { in: approval_statuses.keys }
   validates :purpose, inclusion: { in: purposes.keys }
   validates :listing_status, inclusion: { in: listing_statuses.keys }
+  validates :video_projection, inclusion: { in: %w[flat equirectangular] }
   validates :bedrooms, :bathrooms, numericality: { only_integer: true, greater_than_or_equal_to: 0 }, allow_nil: true
   validates :area_sqft, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
   validates :area_sqm, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true

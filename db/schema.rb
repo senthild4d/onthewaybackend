@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_05_14_120000) do
+ActiveRecord::Schema[8.0].define(version: 2026_05_18_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -161,6 +161,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_120000) do
     t.boolean "furnished"
     t.integer "parking_spaces"
     t.jsonb "features", default: {}, null: false
+    t.string "video_projection", default: "flat", null: false
     t.index ["approval_status"], name: "index_properties_on_approval_status"
     t.index ["archived_at"], name: "index_properties_on_archived_at"
     t.index ["archived_by_id"], name: "index_properties_on_archived_by_id"
@@ -184,6 +185,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_05_14_120000) do
     t.check_constraint "parking_spaces IS NULL OR parking_spaces >= 0", name: "check_properties_parking_non_negative"
     t.check_constraint "price IS NULL OR price >= 0::numeric", name: "check_properties_price_non_negative"
     t.check_constraint "purpose::text = ANY (ARRAY['sale'::character varying, 'rent'::character varying]::text[])", name: "check_properties_purpose"
+    t.check_constraint "video_projection::text = ANY (ARRAY['flat'::character varying, 'equirectangular'::character varying]::text[])", name: "check_properties_video_projection"
     t.check_constraint "year_built IS NULL OR year_built >= 1600 AND year_built <= (EXTRACT(year FROM now())::integer + 1)", name: "check_properties_year_built"
   end
 

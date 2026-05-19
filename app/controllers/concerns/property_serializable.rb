@@ -1,3 +1,5 @@
+require 'uri'
+
 module PropertySerializable
   extend ActiveSupport::Concern
 
@@ -34,6 +36,14 @@ module PropertySerializable
         url: attachment_url(attachment)
       }
     end
+  end
+
+  def immersive_property_video_view_url(property, video_url)
+    return nil if video_url.blank?
+    return nil unless property.video_projection_equirectangular?
+
+    base = base_url_with_prefix.chomp('/')
+    "#{base}/venue_360_viewer.html?url=#{URI.encode_www_form_component(video_url)}"
   end
 
   def property_response(property, detailed: false)
@@ -78,6 +88,8 @@ module PropertySerializable
       coordinates: property.coordinates? ? { latitude: property.latitude.to_f, longitude: property.longitude.to_f } : nil,
       images: property_images_response(property),
       video: video_url,
+      video_projection: property.video_projection,
+      immersive_video_view_url: immersive_property_video_view_url(property, video_url),
       created_at: property.created_at&.iso8601,
       updated_at: property.updated_at&.iso8601
     }
