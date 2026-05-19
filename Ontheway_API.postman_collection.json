@@ -308,6 +308,51 @@
       ]
     },
     {
+      "name": "Owner Dashboard",
+      "item": [
+        {
+          "name": "Dashboard summary (all my properties)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/owner/dashboard_summary", "host": ["{{base_url}}"], "path": ["api", "v1", "owner", "dashboard_summary"] }
+          }
+        },
+        {
+          "name": "Dashboard metrics (period=monthly)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/owner/dashboard_metrics?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "owner", "dashboard_metrics"],
+              "query": [
+                { "key": "period", "value": "monthly", "description": "weekly | monthly | 6months | 1year" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Dashboard summary (legacy venue_manager path)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/venue_manager/dashboard_summary", "host": ["{{base_url}}"], "path": ["api", "v1", "venue_manager", "dashboard_summary"] }
+          }
+        },
+        {
+          "name": "Dashboard metrics (legacy venue_manager path)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/venue_manager/dashboard_metrics?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "venue_manager", "dashboard_metrics"],
+              "query": [{ "key": "period", "value": "monthly" }]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Properties",
       "item": [
         {
@@ -722,19 +767,39 @@
       "name": "Map",
       "item": [
         {
-          "name": "Map markers (detailed properties: images id+url, is_favorited if Bearer)",
+          "name": "Map markers (Vibes-style query — properties)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/v1/maps?purpose=sale&min_price=0&sort_by=price_asc&limit=200",
+              "raw": "{{base_url}}/api/v1/maps?show_properties=true&center_latitude=40.7128&center_longitude=-74.0060&radius_km=10&north=&south=&east=&west=&city=&country=&search=&purpose=sale&property_type=&min_price=&max_price=&sort_by=distance&limit=100",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "maps"],
               "query": [
+                { "key": "show_properties", "value": "true", "description": "Include property markers (default true)" },
+                { "key": "show_venues", "value": "true", "disabled": true, "description": "Legacy alias → same as show_properties" },
+                { "key": "show_events", "value": "true", "disabled": true, "description": "Legacy alias → same as show_properties" },
+                { "key": "center_latitude", "value": "40.7128" },
+                { "key": "center_longitude", "value": "-74.0060" },
+                { "key": "radius_km", "value": "10" },
+                { "key": "north", "value": "", "disabled": true },
+                { "key": "south", "value": "", "disabled": true },
+                { "key": "east", "value": "", "disabled": true },
+                { "key": "west", "value": "", "disabled": true },
+                { "key": "city", "value": "", "disabled": true },
+                { "key": "country", "value": "", "disabled": true },
+                { "key": "region", "value": "", "disabled": true },
+                { "key": "search", "value": "", "disabled": true },
                 { "key": "purpose", "value": "sale" },
-                { "key": "min_price", "value": "0" },
-                { "key": "sort_by", "value": "price_asc" },
-                { "key": "limit", "value": "200" }
+                { "key": "property_type", "value": "apartment", "disabled": true },
+                { "key": "category", "value": "", "disabled": true, "description": "Legacy alias for property_type" },
+                { "key": "currency", "value": "", "disabled": true },
+                { "key": "min_price", "value": "", "disabled": true },
+                { "key": "max_price", "value": "", "disabled": true },
+                { "key": "min_bedrooms", "value": "", "disabled": true },
+                { "key": "features[]", "value": "elevator", "disabled": true },
+                { "key": "sort_by", "value": "distance", "description": "distance|newest|oldest|price_asc|price_desc" },
+                { "key": "limit", "value": "100" }
               ]
             }
           }

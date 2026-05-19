@@ -218,16 +218,60 @@ Uploading a new video replaces the previous one.
 ### Remove video
 `DELETE /api/v1/properties/:id/video`
 
+## Owner dashboard (replaces Vibes venue_manager)
+
+Property owner only (`role: owner` or user with owned properties). **Not** scoped to a venue id.
+
+### Summary (all listings)
+`GET /api/v1/owner/dashboard_summary`
+
+Legacy alias: `GET /api/v1/venue_manager/dashboard_summary`
+
+Returns counts for your properties (approval/listing status), viewings, favorites, and 5 recent listings.
+
+### Metrics by period
+`GET /api/v1/owner/dashboard_metrics?period=monthly`
+
+Legacy alias: `GET /api/v1/venue_manager/dashboard_metrics?period=monthly`
+
+`period`: `weekly` | `monthly` | `6months` | `1year` (default `monthly`).
+
+Includes `listings`, `viewings`, `engagement`, and legacy-shaped `rsvp` / `tickets` blocks for app compatibility (`rsvp` = viewings, `tickets` = sold listings / sale value).
+
 ## Map (properties only)
 
 ### Markers
 `GET /api/v1/maps`
 
+Vibes-style query (venues/events → **properties** on this app):
+
+```
+GET /api/v1/maps?show_properties=true
+  &center_latitude=40.7128&center_longitude=-74.0060&radius_km=10
+  &north=&south=&east=&west=
+  &city=&country=&region=&search=
+  &purpose=sale&property_type=apartment
+  &min_price=&max_price=&min_bedrooms=&features[]=elevator
+  &sort_by=distance&limit=100
+```
+
+**Layer toggle:** `show_properties=true|false` (default `true`). Legacy aliases: `show_venues`, `show_events` (either `true` includes properties).
+
+**Geo:** use **radius** (`center_latitude`, `center_longitude`, `radius_km`) **or** **bounding box** (`north`, `south`, `east`, `west`) — not both required; empty strings are ignored.
+
+**Filters:** `city`, `country`, `region`, `search`, `purpose`, `property_type` (legacy: `category`), `currency`, price/bedroom/bathroom/area ranges, `features[]`.
+
+**Admin only:** `approval_status` / `status`, `listing_status`. Legacy `event_status`: `published` → approved.
+
+**Sort:** `distance` (needs center), `newest`, `oldest`, `price_asc`, `price_desc`.
+
 Returns:
-- `properties` (markers)
-- `bounds`
-- `metadata`
+- `properties` — full marker payloads (`type: "property"`, images with `id`, `is_favorited`, 360° fields, …)
+- `bounds` — computed from results
+- `metadata` — `properties_count`, `total_markers`, `show_properties`, optional `center`
 
 ### Filter options
 `GET /api/v1/maps/filter_options`
+
+Returns property filter options from `PropertyOptions` plus map-specific `radius_options`, `sort_options`, and `query_params` documentation.
 

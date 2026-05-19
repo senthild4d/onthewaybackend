@@ -1,51 +1,43 @@
+# frozen_string_literal: true
+
 module Api
   module V1
     class MapsController < ApplicationController
       include PropertySerializable
+      include MapsPropertyScoping
 
       before_action :require_authentication!, except: [:index, :filter_options]
 
       # GET /api/v1/maps
+      # Vibes-style query (properties replace venues/events):
+      #   show_properties=true
+      #   center_latitude, center_longitude, radius_km
+      #   north, south, east, west
+      #   city, country, region, search, purpose, property_type (or legacy category)
+      #   min_price, max_price, min_bedrooms, features[], sort_by, limit
+      # Legacy aliases: show_venues, show_events, event_status, category
       def index
-        properties = fetch_properties
-        properties_array = properties.is_a?(Array) ? properties : properties.to_a
-        items_for_bounds = properties_array
-        preload_favorite_property_ids!(properties_array)
+        properties_array = []
+        if show_map_properties?
+          properties_array = fetch_map_properties
+          preload_favorite_property_ids!(properties_array)
+        end
 
         map_data = {
           properties: properties_array.map { |p| map_property_response(p) }.compact,
-          bounds: calculate_bounds(items_for_bounds),
-          metadata: {
-            properties_count: properties_array.count,
-            total_markers: properties_array.count
-          }
+          bounds: calculate_bounds(properties_array),
+          metadata: map_metadata(properties_array)
         }
 
-        api_success(
-          data: map_data,
-          status: :ok
-        )
+        api_success(data: map_data, status: :ok)
       end
 
       # GET /api/v1/maps/filter_options
       def filter_options
-        # Get available filter options for the map view
-        options = {
-          approval_statuses: [
-            { value: 'approved', label: 'Approved' },
-            { value: 'pending_review', label: 'Pending review' },
-            { value: 'draft', label: 'Draft' },
-            { value: 'rejected', label: 'Rejected' }
-          ],
-          listing_statuses: [
-            { value: 'active', label: 'Active' },
-            { value: 'sold', label: 'Sold' },
-            { value: 'archived', label: 'Archived' }
-          ],
-          purposes: [
-            { value: 'sale', label: 'Sale' },
-            { value: 'rent', label: 'Rent' }
-          ],
+        base = PropertyOptions.filter_options(admin: current_user&.admin?)
+
+        options = base.merge(
+          show_properties: { default: true, description: 'Include property markers (legacy: show_venues / show_events)' },
           radius_options: [
             { value: 1, label: '1 km' },
             { value: 5, label: '5 km' },
@@ -55,122 +47,66 @@ module Api
             { value: 100, label: '100 km' }
           ],
           sort_options: [
-            { value: 'distance', label: 'Distance' },
+            { value: 'distance', label: 'Distance (requires center_latitude & center_longitude)' },
             { value: 'newest', label: 'Newest' },
+            { value: 'oldest', label: 'Oldest' },
             { value: 'price_asc', label: 'Price (low to high)' },
             { value: 'price_desc', label: 'Price (high to low)' }
-          ]
-        }
-
-        api_success(
-          data: options,
-          status: :ok
+          ],
+          query_params: map_query_param_docs
         )
+
+        api_success(data: options, status: :ok)
       end
 
       private
 
-      def fetch_properties
-        scope = Property.includes(images_attachments: :blob, video_attachment: :blob, owner: { profile_picture_attachment: :blob })
-
-        # Default map is public: approved only. Staff can include more via status param.
-        if current_user&.admin?
-          scope = scope.where(approval_status: Array(params[:status])) if params[:status].present?
-          scope = scope.where(listing_status: Array(params[:listing_status])) if params[:listing_status].present?
-        elsif current_user&.role_owner?
-          scope = scope.where('approval_status = ? OR owner_id = ?', 'approved', current_user.id)
-        else
-          scope = scope.visible_to_public
-        end
-
-        # Only return properties with coordinates
-        scope = scope.where.not(latitude: nil, longitude: nil)
-
-        # Filter by bounding box if provided
-        if bounding_box_provided?
-          scope = scope.where(
-            'latitude >= ? AND latitude <= ? AND longitude >= ? AND longitude <= ?',
-            params[:south].to_f,
-            params[:north].to_f,
-            params[:west].to_f,
-            params[:east].to_f
-          )
-        end
-
-        # Radius filter (simple lat/lng range, consistent with existing code)
-        if radius_search_provided?
-          center_lat = params[:center_latitude].to_f
-          center_lng = params[:center_longitude].to_f
-          radius_km = params[:radius_km].to_f
-          radius_km = 10.0 if radius_km <= 0
-
-          lat_range = radius_km / 111.0
-          lng_range = radius_km / (111.0 * Math.cos(center_lat * Math::PI / 180.0))
-
-          scope = scope.where(
-            'latitude >= ? AND latitude <= ? AND longitude >= ? AND longitude <= ?',
-            center_lat - lat_range,
-            center_lat + lat_range,
-            center_lng - lng_range,
-            center_lng + lng_range
-          )
-        end
-
-        scope = scope.where(city: params[:city]) if params[:city].present?
-        scope = scope.where(country: params[:country]) if params[:country].present?
-        scope = scope.where(region: params[:region]) if params[:region].present?
-        scope = scope.where(purpose: params[:purpose]) if params[:purpose].present?
-        scope = scope.where(property_type: Array(params[:property_type])) if params[:property_type].present?
-
-        if params[:min_price].present?
-          scope = scope.where('price >= ?', params[:min_price].to_d)
-        end
-        if params[:max_price].present?
-          scope = scope.where('price <= ?', params[:max_price].to_d)
-        end
-
-        if params[:min_bedrooms].present?
-          scope = scope.where('bedrooms >= ?', params[:min_bedrooms].to_i)
-        end
-        if params[:min_bathrooms].present?
-          scope = scope.where('bathrooms >= ?', params[:min_bathrooms].to_i)
-        end
-
-        if params[:min_area_sqm].present?
-          scope = scope.where('area_sqm >= ?', params[:min_area_sqm].to_d)
-        end
-
-        if params[:features].present?
-          keys = Array(params[:features]).map(&:to_s).reject(&:blank?)
-          keys.each do |k|
-            scope = scope.where("features ->> ? = 'true'", k)
-          end
-        end
-
-        if params[:search].present?
-          scope = scope.where('title ILIKE ?', "%#{params[:search]}%")
-        end
-
-        case params[:sort_by]
-        when 'price_asc'
-          scope = scope.order(Arel.sql('price ASC NULLS LAST'), created_at: :desc)
-        when 'price_desc'
-          scope = scope.order(Arel.sql('price DESC NULLS LAST'), created_at: :desc)
-        else
-          scope = scope.order(created_at: :desc)
-        end
-
-        limit = [params[:limit]&.to_i || 200, 500].min
-        scope.limit(limit).to_a
+      def map_metadata(properties_array)
+        {
+          properties_count: properties_array.count,
+          total_markers: properties_array.count,
+          show_properties: show_map_properties?,
+          center: map_radius_search_provided? ? {
+            latitude: params[:center_latitude].to_f,
+            longitude: params[:center_longitude].to_f,
+            radius_km: (params[:radius_km].presence || 10).to_f
+          } : nil
+        }
       end
 
-      def bounding_box_provided?
-        params[:north].present? && params[:south].present? && 
-        params[:east].present? && params[:west].present?
-      end
-
-      def radius_search_provided?
-        params[:center_latitude].present? && params[:center_longitude].present?
+      def map_query_param_docs
+        {
+          show_properties: 'true|false (default true). Legacy: show_venues, show_events',
+          center_latitude: 'Center for radius / distance sort',
+          center_longitude: 'Center for radius / distance sort',
+          radius_km: 'Radius in km (default 10 when center set)',
+          north: 'Bounding box',
+          south: 'Bounding box',
+          east: 'Bounding box',
+          west: 'Bounding box',
+          city: 'City filter',
+          country: 'Country filter',
+          region: 'Region filter',
+          search: 'Search title, description, address, city, …',
+          purpose: 'sale | rent',
+          property_type: 'Property type (array). Legacy alias: category',
+          currency: 'USD, USDT, AED, …',
+          min_price: 'Minimum price',
+          max_price: 'Maximum price',
+          min_bedrooms: 'Minimum bedrooms',
+          max_bedrooms: 'Maximum bedrooms',
+          min_bathrooms: 'Minimum bathrooms',
+          max_bathrooms: 'Maximum bathrooms',
+          min_area_sqm: 'Minimum area sqm',
+          max_area_sqm: 'Maximum area sqm',
+          features: 'features[] repeatable',
+          approval_status: 'Admin: draft, pending_review, approved, rejected',
+          listing_status: 'Admin: active, sold, archived',
+          status: 'Admin alias for approval_status',
+          event_status: 'Legacy alias (published→approved)',
+          sort_by: 'distance, newest, oldest, price_asc, price_desc',
+          limit: 'Max markers (default 200, max 500)'
+        }
       end
 
       def calculate_bounds(items)
@@ -182,6 +118,7 @@ module Api
         items.each do |item|
           next unless item.respond_to?(:latitude) && item.respond_to?(:longitude)
           next if item.latitude.blank? || item.longitude.blank?
+
           lats << item.latitude.to_f
           lngs << item.longitude.to_f
         end
@@ -208,4 +145,3 @@ module Api
     end
   end
 end
-

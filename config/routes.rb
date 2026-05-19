@@ -83,6 +83,14 @@ Rails.application.routes.draw do
       # Search
       get 'search', to: 'search#index'
 
+      # Owner dashboard (property owner — replaces Vibes venue_manager / per-venue metrics)
+      namespace :owner do
+        get 'dashboard_summary', to: 'dashboard#summary'
+        get 'dashboard_metrics', to: 'dashboard#metrics'
+      end
+      get 'venue_manager/dashboard_summary', to: 'owner/dashboard#summary'
+      get 'venue_manager/dashboard_metrics', to: 'owner/dashboard#metrics'
+
       # Properties (real-estate)
       get 'properties/form_options', to: 'properties#form_options'
       get 'properties/filter_options', to: 'properties#filter_options'
