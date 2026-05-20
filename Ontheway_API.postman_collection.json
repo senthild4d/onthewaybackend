@@ -772,7 +772,7 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "url": {
-              "raw": "{{base_url}}/api/v1/maps?show_properties=true&center_latitude=40.7128&center_longitude=-74.0060&radius_km=10&north=&south=&east=&west=&city=&country=&search=&purpose=sale&property_type=&min_price=&max_price=&sort_by=distance&limit=100",
+              "raw": "{{base_url}}/api/v1/maps?show_properties=true&center_latitude=40.7128&center_longitude=-74.0060&radius_km=10&north=&south=&east=&west=&city=&country=&search=&purpose=sale&property_type=&min_price=&max_price=&has_360_view=true&sort_by=distance&limit=100",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "maps"],
               "query": [
@@ -797,6 +797,7 @@
                 { "key": "min_price", "value": "", "disabled": true },
                 { "key": "max_price", "value": "", "disabled": true },
                 { "key": "min_bedrooms", "value": "", "disabled": true },
+                { "key": "has_360_view", "value": "true", "disabled": true, "description": "Only properties with 360° equirectangular video" },
                 { "key": "features[]", "value": "elevator", "disabled": true },
                 { "key": "sort_by", "value": "distance", "description": "distance|newest|oldest|price_asc|price_desc" },
                 { "key": "limit", "value": "100" }

@@ -67,6 +67,16 @@ module MapsPropertyScoping
     scope = scope.where('area_sqm >= ?', params[:min_area_sqm].to_d) if params[:min_area_sqm].present?
     scope = scope.where('area_sqm <= ?', params[:max_area_sqm].to_d) if params[:max_area_sqm].present?
 
+    if params.key?(:has_360_view) && param_truthy?(params[:has_360_view])
+      scope = scope.where(video_projection: 'equirectangular')
+                   .joins(
+                     "INNER JOIN active_storage_attachments property_video_attachments " \
+                     "ON property_video_attachments.record_type = 'Property' " \
+                     'AND property_video_attachments.record_id = properties.id ' \
+                     "AND property_video_attachments.name = 'video'"
+                   )
+    end
+
     if params[:features].present?
       Array(params[:features]).map(&:to_s).reject(&:blank?).each do |key|
         scope = scope.where("features ->> ? = 'true'", key)

@@ -65,6 +65,7 @@ module Api
         {
           properties_count: properties_array.count,
           total_markers: properties_array.count,
+          properties_with_360_count: properties_array.count { |property| property.video_projection_equirectangular? && property.video.attached? },
           show_properties: show_map_properties?,
           center: map_radius_search_provided? ? {
             latitude: params[:center_latitude].to_f,
@@ -99,13 +100,15 @@ module Api
           max_bathrooms: 'Maximum bathrooms',
           min_area_sqm: 'Minimum area sqm',
           max_area_sqm: 'Maximum area sqm',
+          has_360_view: 'true to return only properties with equirectangular video attached',
           features: 'features[] repeatable',
           approval_status: 'Admin: draft, pending_review, approved, rejected',
           listing_status: 'Admin: active, sold, archived',
           status: 'Admin alias for approval_status',
           event_status: 'Legacy alias (published→approved)',
           sort_by: 'distance, newest, oldest, price_asc, price_desc',
-          limit: 'Max markers (default 200, max 500)'
+          limit: 'Max markers (default 200, max 500)',
+          view_360: 'Response field: available when video_projection=equirectangular and video is present'
         }
       end
 

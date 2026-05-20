@@ -251,7 +251,7 @@ GET /api/v1/maps?show_properties=true
   &north=&south=&east=&west=
   &city=&country=&region=&search=
   &purpose=sale&property_type=apartment
-  &min_price=&max_price=&min_bedrooms=&features[]=elevator
+  &min_price=&max_price=&min_bedrooms=&has_360_view=true&features[]=elevator
   &sort_by=distance&limit=100
 ```
 
@@ -259,7 +259,7 @@ GET /api/v1/maps?show_properties=true
 
 **Geo:** use **radius** (`center_latitude`, `center_longitude`, `radius_km`) **or** **bounding box** (`north`, `south`, `east`, `west`) — not both required; empty strings are ignored.
 
-**Filters:** `city`, `country`, `region`, `search`, `purpose`, `property_type` (legacy: `category`), `currency`, price/bedroom/bathroom/area ranges, `features[]`.
+**Filters:** `city`, `country`, `region`, `search`, `purpose`, `property_type` (legacy: `category`), `currency`, price/bedroom/bathroom/area ranges, `features[]`, `has_360_view=true`.
 
 **Admin only:** `approval_status` / `status`, `listing_status`. Legacy `event_status`: `published` → approved.
 
@@ -267,8 +267,11 @@ GET /api/v1/maps?show_properties=true
 
 Returns:
 - `properties` — full marker payloads (`type: "property"`, images with `id`, `is_favorited`, 360° fields, …)
+  - `has_360_view` — `true` when equirectangular video is attached
+  - `view_360_url` / `immersive_video_view_url` — WebView URL for `/venue_360_viewer.html`
+  - `view_360` — `{ available, projection, video_url, viewer_url }`
 - `bounds` — computed from results
-- `metadata` — `properties_count`, `total_markers`, `show_properties`, optional `center`
+- `metadata` — `properties_count`, `properties_with_360_count`, `total_markers`, `show_properties`, optional `center`
 
 ### Filter options
 `GET /api/v1/maps/filter_options`

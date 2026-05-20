@@ -46,8 +46,20 @@ module PropertySerializable
     "#{base}/venue_360_viewer.html?url=#{URI.encode_www_form_component(video_url)}"
   end
 
+  def property_view_360_response(property, video_url)
+    viewer_url = immersive_property_video_view_url(property, video_url)
+
+    {
+      available: viewer_url.present?,
+      projection: property.video_projection,
+      video_url: video_url,
+      viewer_url: viewer_url
+    }
+  end
+
   def property_response(property, detailed: false)
     video_url = attachment_url(property.video)
+    view_360 = property_view_360_response(property, video_url)
 
     data = {
       id: property.id,
@@ -89,7 +101,10 @@ module PropertySerializable
       images: property_images_response(property),
       video: video_url,
       video_projection: property.video_projection,
-      immersive_video_view_url: immersive_property_video_view_url(property, video_url),
+      has_360_view: view_360[:available],
+      view_360_url: view_360[:viewer_url],
+      immersive_video_view_url: view_360[:viewer_url],
+      view_360: view_360,
       created_at: property.created_at&.iso8601,
       updated_at: property.updated_at&.iso8601
     }
