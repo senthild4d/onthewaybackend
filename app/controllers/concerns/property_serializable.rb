@@ -40,7 +40,6 @@ module PropertySerializable
 
   def immersive_property_video_view_url(property, video_url)
     return nil if video_url.blank?
-    return nil unless property.video_projection_equirectangular?
 
     base = base_url_with_prefix.chomp('/')
     "#{base}/venue_360_viewer.html?url=#{URI.encode_www_form_component(video_url)}"
@@ -50,7 +49,7 @@ module PropertySerializable
     viewer_url = immersive_property_video_view_url(property, video_url)
 
     {
-      available: viewer_url.present?,
+      available: viewer_url.present? && property.video_projection_equirectangular?,
       projection: property.video_projection,
       video_url: video_url,
       viewer_url: viewer_url

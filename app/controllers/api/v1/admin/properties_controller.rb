@@ -114,6 +114,7 @@ module Api
 
         def admin_property_response(property, detailed: false)
           video_url = attachment_url(property.video)
+          view_360 = property_view_360_response(property, video_url)
 
           data = {
             id: property.id,
@@ -143,7 +144,10 @@ module Api
             images: property_images_response(property),
             video: video_url,
             video_projection: property.video_projection,
-            immersive_video_view_url: immersive_property_video_view_url(property, video_url),
+            has_360_view: view_360[:available],
+            view_360_url: view_360[:viewer_url],
+            immersive_video_view_url: view_360[:viewer_url],
+            view_360: view_360,
             submitted_at: property.submitted_at&.iso8601,
             approved_at: property.approved_at&.iso8601,
             rejected_at: property.rejected_at&.iso8601,

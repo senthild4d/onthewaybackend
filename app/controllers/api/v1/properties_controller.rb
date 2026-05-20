@@ -4,8 +4,8 @@ module Api
       include PropertySerializable
 
       before_action :require_authentication!, except: [:index, :show, :form_options, :filter_options, :search]
-      before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :mark_sold, :archive, :unarchive, :upload_images, :upload_video, :remove_image, :remove_video]
-      before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :remove_image, :remove_video, :submit]
+      before_action :set_property, only: [:show, :update, :destroy, :submit, :approve, :reject, :mark_sold, :archive, :unarchive, :upload_images, :upload_video, :upload_360_video, :remove_image, :remove_video]
+      before_action :authorize_owner_or_staff!, only: [:update, :destroy, :upload_images, :upload_video, :upload_360_video, :remove_image, :remove_video, :submit]
       before_action :authorize_staff!, only: [:approve, :reject]
       before_action :authorize_owner_or_admin!, only: [:mark_sold, :archive, :unarchive]
 
@@ -307,6 +307,21 @@ module Api
         end
       end
 
+      # POST /api/v1/properties/:id/360_video
+      def upload_360_video
+        unless params[:video].present?
+          api_error(message: 'video is required', status: :bad_request)
+          return
+        end
+
+        attach_video(@property, replace: true, projection: 'equirectangular')
+        if @property.save
+          api_success(data: { property: property_response(@property.reload, detailed: true) }, message: '360 video uploaded', status: :ok)
+        else
+          api_validation_error(errors: @property.errors.full_messages)
+        end
+      end
+
       # DELETE /api/v1/properties/:id/video
       def remove_video
         @property.video.purge if @property.video.attached?
@@ -412,11 +427,24 @@ module Api
         imgs.each { |img| property.images.attach(img) } if imgs.present?
       end
 
-      def attach_video(property, replace: false)
+      def attach_video(property, replace: false, projection: nil)
         vid = params[:video]
         return unless vid.present?
+
+        projection ||= video_projection_param
+        property.video_projection = projection if projection.present?
+
         property.video.purge if replace && property.video.attached?
         property.video.attach(vid)
+      end
+
+      def video_projection_param
+        value = params[:video_projection].presence || params.dig(:property, :video_projection).presence || params[:projection].presence
+        return value if value.present?
+
+        if ActiveModel::Type::Boolean.new.cast(params[:is_360_video] || params[:is_360] || params[:has_360_view])
+          'equirectangular'
+        end
       end
     end
   end

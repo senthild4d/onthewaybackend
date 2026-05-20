@@ -212,8 +212,17 @@ Multipart form-data:
 
 Multipart form-data:
 - `video`
+- optional `video_projection=equirectangular` or `is_360=true`
 
 Uploading a new video replaces the previous one.
+
+### Upload 360 video (one-step)
+`POST /api/v1/properties/:id/360_video`
+
+Multipart form-data:
+- `video` — equirectangular 2:1 MP4
+
+This automatically sets `video_projection` to `equirectangular`, replaces the previous video, and returns `view_360_url` / `immersive_video_view_url`.
 
 ### Remove video
 `DELETE /api/v1/properties/:id/video`

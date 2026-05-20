@@ -106,6 +106,7 @@ Rails.application.routes.draw do
           post 'images', to: 'properties#upload_images'
           delete 'images/:image_id', to: 'properties#remove_image'
           post 'video', to: 'properties#upload_video'
+          post '360_video', to: 'properties#upload_360_video'
           delete 'video', to: 'properties#remove_video'
         end
       end

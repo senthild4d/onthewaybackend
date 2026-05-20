@@ -2,7 +2,7 @@
   "info": {
     "name": "RealEstate API - Auth + Properties",
     "_postman_id": "real-estate-api-collection-v1",
-    "description": "Real-estate backend API collection\n\n## Roles\nAllowed `role` values: `user`, `owner`, `admin`. Admin access: `role=admin` **or** `is_admin=true` on the user.\n\n## Base URL\nSet `{{base_url}}` (example: `https://vibesapp.digital4design.com/ontheway` or `http://localhost:3000`).\n\n## Auth\nMost requests use Bearer `{{jwt_token}}`.\n\n## Property responses (list / show / map / favorites / admin)\n- `images`: `[{ \"id\": \"uuid\", \"url\": \"...\" }]` — use `id` for `DELETE .../images/:image_id`\n- `video`, `video_projection` (`flat` | `equirectangular`), `immersive_video_view_url` (360° WebView URL when equirectangular + video present)\n- `features`: boolean values (e.g. `balcony: true`)\n- `is_favorited`: when logged in\n\n## Favorites\n`GET /favorites` returns `{ id, created_at, property: { ...full property + type } }`.\n\n## Main resources\n- Auth (OTP)\n- Profile\n- Properties (CRUD + media + approval + lifecycle + 360° video metadata)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n- Admin (users, properties)\n",
+    "description": "Real-estate backend API collection\n\n## Roles\nAllowed `role` values: `user`, `owner`, `admin`. Admin access: `role=admin` **or** `is_admin=true` on the user.\n\n## Base URL\nSet `{{base_url}}` (example: `https://vibesapp.digital4design.com/ontheway` or `http://localhost:3000`).\n\n## Auth\nMost requests use Bearer `{{jwt_token}}`.\n\n## Property responses (list / show / map / favorites / admin)\n- `images`: `[{ \"id\": \"uuid\", \"url\": \"...\" }]` — use `id` for `DELETE .../images/:image_id`\n- `video`, `video_projection` (`flat` | `equirectangular`), `view_360_url` / `immersive_video_view_url` (WebView URL when video is present), `has_360_view` (true when equirectangular + video present)\n- `features`: boolean values (e.g. `balcony: true`)\n- `is_favorited`: when logged in\n\n## Favorites\n`GET /favorites` returns `{ id, created_at, property: { ...full property + type } }`.\n\n## Main resources\n- Auth (OTP)\n- Profile\n- Properties (CRUD + media + approval + lifecycle + 360° video metadata)\n- Favorites\n- Viewings (appointments)\n- Maps (properties only)\n- Admin (users, properties)\n",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -545,10 +545,25 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "video", "type": "file", "src": "" }
+                { "key": "video", "type": "file", "src": "" },
+                { "key": "video_projection", "value": "equirectangular", "type": "text" },
+                { "key": "is_360", "value": "true", "type": "text", "disabled": true }
               ]
             },
             "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "video"] }
+          }
+        },
+        {
+          "name": "Upload property 360 video (multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "video", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/properties/{{property_id}}/360_video", "host": ["{{base_url}}"], "path": ["api", "v1", "properties", "{{property_id}}", "360_video"] }
           }
         },
         {
