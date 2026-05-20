@@ -95,6 +95,7 @@ Rails.application.routes.draw do
       get 'properties/form_options', to: 'properties#form_options'
       get 'properties/filter_options', to: 'properties#filter_options'
       get 'properties/search', to: 'properties#search'
+      post 'properties/:id/360_video', to: 'properties#upload_360_video'
       resources :properties, except: [:new, :edit] do
         member do
           post 'submit', to: 'properties#submit'
