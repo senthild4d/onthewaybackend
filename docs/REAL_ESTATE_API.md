@@ -57,6 +57,52 @@ Allowed `role`: `user | owner`
 
 Auth: `Authorization: Bearer <jwt>`
 
+## Legal Documents
+
+### List legal documents
+`GET /api/v1/legal_documents`
+
+Returns all supported document slots:
+
+- `community_guidelines`
+- `terms_of_service`
+- `privacy_policy`
+
+### Show legal document
+`GET /api/v1/legal_documents/:kind`
+
+### Upload legal document (admin)
+`POST /api/v1/legal_documents`
+
+Auth: admin Bearer token.
+
+Multipart form-data:
+
+- `kind`: `community_guidelines | terms_of_service | privacy_policy`
+- `file`: uploaded PDF/HTML/TXT/DOC/DOCX binary file
+
+Also accepts `document` instead of `file`, and `document_type` or `type` instead of `kind`.
+
+Existing admin path still works:
+
+`POST /api/v1/admin/legal_documents/:kind/upload`
+
+## WebSocket
+
+ActionCable endpoint:
+
+```text
+wss://<host>/cable?token=<jwt_token>
+```
+
+Real-estate channels:
+
+- `OwnerDashboardChannel` — owner dashboard summary updates.
+- `PropertyChannel` — updates for one property (`property_id` required).
+- `UserNotificationsChannel` — per-user updates such as viewing status changes.
+
+See `docs/REAL_ESTATE_WEBSOCKET.md` for subscribe payloads and event shapes.
+
 ## Properties
 
 ### List properties

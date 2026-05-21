@@ -55,6 +55,54 @@
   ],
   "item": [
     {
+      "name": "Legal Documents",
+      "item": [
+        {
+          "name": "List legal documents",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/legal_documents", "host": ["{{base_url}}"], "path": ["api", "v1", "legal_documents"] }
+          }
+        },
+        {
+          "name": "Show legal document",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/legal_documents/privacy_policy", "host": ["{{base_url}}"], "path": ["api", "v1", "legal_documents", "privacy_policy"] }
+          }
+        },
+        {
+          "name": "Upload legal document (admin, multipart)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "kind", "value": "privacy_policy", "type": "text", "description": "community_guidelines | terms_of_service | privacy_policy" },
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/legal_documents", "host": ["{{base_url}}"], "path": ["api", "v1", "legal_documents"] }
+          }
+        },
+        {
+          "name": "Upload legal document (admin legacy path)",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" }
+              ]
+            },
+            "url": { "raw": "{{base_url}}/api/v1/admin/legal_documents/privacy_policy/upload", "host": ["{{base_url}}"], "path": ["api", "v1", "admin", "legal_documents", "privacy_policy", "upload"] }
+          }
+        }
+      ]
+    },
+    {
       "name": "Auth",
       "item": [
         {

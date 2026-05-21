@@ -3,6 +3,9 @@
 module Api
   module V1
     class LegalDocumentsController < ApplicationController
+      before_action :require_authentication!, only: [:upload]
+      before_action :require_admin!, only: [:upload]
+
       # GET /api/v1/legal_documents
       def index
         items = LegalDocument.kinds.keys.map do |kind|
@@ -25,6 +28,43 @@ module Api
           data: { legal_document: legal_document_response(record, kind: kind) },
           status: :ok
         )
+      end
+
+      # POST /api/v1/legal_documents
+      #
+      # multipart/form-data:
+      # - kind: community_guidelines | terms_of_service | privacy_policy
+      # - file: PDF/HTML/TXT/DOC/DOCX (also accepts field name "document")
+      def upload
+        kind = LegalDocument.normalize_kind(params[:kind] || params[:document_type] || params[:type])
+        unless kind
+          api_error(message: "Invalid document type. Use: #{LegalDocument.kinds.keys.join(', ')}", status: :bad_request)
+          return
+        end
+
+        upload = params[:file] || params[:document]
+        if upload.blank?
+          api_error(message: 'File is required (multipart field "file" or "document")', status: :bad_request)
+          return
+        end
+
+        if upload.is_a?(String)
+          api_error(message: 'File must be uploaded as multipart binary data, not a path string', status: :bad_request)
+          return
+        end
+
+        legal_document = LegalDocument.find_or_initialize_by(kind: kind)
+        legal_document.file.attach(upload)
+
+        if legal_document.save
+          api_success(
+            data: { legal_document: legal_document_response(legal_document, kind: kind) },
+            message: 'Document uploaded successfully',
+            status: :ok
+          )
+        else
+          api_validation_error(errors: legal_document.errors.full_messages)
+        end
       end
 
       private

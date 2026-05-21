@@ -207,6 +207,7 @@ module Api
         attach_video(property)
 
         if property.save
+          PropertyRealtimeService.property_updated(property, action: 'created', actor: current_user)
           api_success(data: { property: property_response(property, detailed: true) }, message: 'Property created', status: :created)
         else
           api_validation_error(errors: property.errors.full_messages)
@@ -216,6 +217,7 @@ module Api
       # PATCH /api/v1/properties/:id
       def update
         if @property.update(property_params)
+          PropertyRealtimeService.property_updated(@property.reload, action: 'updated', actor: current_user)
           api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property updated', status: :ok)
         else
           api_validation_error(errors: @property.errors.full_messages)
@@ -224,6 +226,7 @@ module Api
 
       # DELETE /api/v1/properties/:id
       def destroy
+        PropertyRealtimeService.property_updated(@property, action: 'deleted', actor: current_user)
         @property.destroy
         api_success(message: 'Property deleted', status: :ok, data: { id: @property.id })
       end
@@ -232,6 +235,7 @@ module Api
       def submit
         if @property.approval_status_draft? || @property.approval_status_rejected?
           @property.submit_for_review!
+          PropertyRealtimeService.property_updated(@property.reload, action: 'submitted', actor: current_user)
           api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Submitted for review', status: :ok)
         else
           api_error(message: 'Property cannot be submitted in its current state', status: :bad_request)
@@ -242,6 +246,7 @@ module Api
       def approve
         @property.approve!(by: current_user)
         notify_property_owner(@property, 'Property Approved', "Your property \"#{@property.title}\" has been approved.", 'property_approved')
+        PropertyRealtimeService.property_updated(@property.reload, action: 'approved', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property approved', status: :ok)
       end
 
@@ -255,24 +260,28 @@ module Api
 
         @property.reject!(by: current_user, reason: reason)
         notify_property_owner(@property, 'Property Rejected', "Your property \"#{@property.title}\" was rejected. Reason: #{reason}", 'property_rejected')
+        PropertyRealtimeService.property_updated(@property.reload, action: 'rejected', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property rejected', status: :ok)
       end
 
       # POST /api/v1/properties/:id/mark_sold
       def mark_sold
         @property.mark_sold!(by: current_user)
+        PropertyRealtimeService.property_updated(@property.reload, action: 'sold', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property marked as sold', status: :ok)
       end
 
       # POST /api/v1/properties/:id/archive
       def archive
         @property.archive!(by: current_user)
+        PropertyRealtimeService.property_updated(@property.reload, action: 'archived', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property archived', status: :ok)
       end
 
       # POST /api/v1/properties/:id/unarchive
       def unarchive
         @property.unarchive!
+        PropertyRealtimeService.property_updated(@property.reload, action: 'unarchived', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Property unarchived', status: :ok)
       end
 
@@ -280,6 +289,7 @@ module Api
       def upload_images
         attach_images(@property)
         if @property.save
+          PropertyRealtimeService.property_updated(@property.reload, action: 'images_uploaded', actor: current_user)
           api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Images uploaded', status: :ok)
         else
           api_validation_error(errors: @property.errors.full_messages)
@@ -294,6 +304,7 @@ module Api
           return
         end
         img.purge
+        PropertyRealtimeService.property_updated(@property.reload, action: 'image_removed', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Image removed', status: :ok)
       end
 
@@ -301,6 +312,7 @@ module Api
       def upload_video
         attach_video(@property, replace: true)
         if @property.save
+          PropertyRealtimeService.property_updated(@property.reload, action: 'video_uploaded', actor: current_user)
           api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Video uploaded', status: :ok)
         else
           api_validation_error(errors: @property.errors.full_messages)
@@ -316,6 +328,7 @@ module Api
 
         attach_video(@property, replace: true, projection: 'equirectangular')
         if @property.save
+          PropertyRealtimeService.property_updated(@property.reload, action: 'video_360_uploaded', actor: current_user)
           api_success(data: { property: property_response(@property.reload, detailed: true) }, message: '360 video uploaded', status: :ok)
         else
           api_validation_error(errors: @property.errors.full_messages)
@@ -325,6 +338,7 @@ module Api
       # DELETE /api/v1/properties/:id/video
       def remove_video
         @property.video.purge if @property.video.attached?
+        PropertyRealtimeService.property_updated(@property.reload, action: 'video_removed', actor: current_user)
         api_success(data: { property: property_response(@property.reload, detailed: true) }, message: 'Video removed', status: :ok)
       end
 

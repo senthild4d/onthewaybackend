@@ -7,6 +7,7 @@ Rails.application.routes.draw do
     namespace :v1 do
       # Legal / policy documents (public URLs for in-app display)
       get 'legal_documents', to: 'legal_documents#index'
+      post 'legal_documents', to: 'legal_documents#upload'
       get 'legal_documents/:kind', to: 'legal_documents#show'
 
       # Support team moderation (country-level)

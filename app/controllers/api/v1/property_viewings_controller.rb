@@ -53,6 +53,7 @@ module Api
 
         if viewing.save
           notify_owner_of_request(viewing)
+          PropertyRealtimeService.viewing_updated(viewing, action: 'requested', actor: current_user)
           api_success(data: { viewing: viewing_response(viewing) }, message: 'Viewing requested', status: :created)
         else
           api_validation_error(errors: viewing.errors.full_messages)
@@ -69,6 +70,7 @@ module Api
         previous_status = @viewing.status
         if @viewing.update(viewing_update_params.merge(handled_by_id: current_user.id, handled_at: Time.current))
           notify_viewing_status_change(@viewing, previous_status) if previous_status != @viewing.status
+          PropertyRealtimeService.viewing_updated(@viewing.reload, action: 'updated', actor: current_user)
           api_success(data: { viewing: viewing_response(@viewing.reload, detailed: true) }, message: 'Viewing updated', status: :ok)
         else
           api_validation_error(errors: @viewing.errors.full_messages)
@@ -84,6 +86,7 @@ module Api
 
         @viewing.update!(status: 'cancelled')
         notify_viewing_status_change(@viewing, 'cancelled_by_user')
+        PropertyRealtimeService.viewing_updated(@viewing.reload, action: 'cancelled', actor: current_user)
         api_success(data: { viewing: viewing_response(@viewing.reload, detailed: true) }, message: 'Viewing cancelled', status: :ok)
       end
 
