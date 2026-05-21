@@ -57,6 +57,40 @@ Allowed `role`: `user | owner`
 
 Auth: `Authorization: Bearer <jwt>`
 
+### Register FCM token
+`POST /api/v1/auth/register_fcm_token`
+
+Auth: `Authorization: Bearer <jwt>`
+
+Use this after login, and whenever Firebase gives a new token.
+
+```json
+{
+  "fcm_token": "FCM_DEVICE_TOKEN_HERE",
+  "device_uuid": "device-uuid-123",
+  "platform": "android",
+  "device_name": "Pixel 8",
+  "device_type": "phone",
+  "platform_version": "14",
+  "app_version": "1.0.0"
+}
+```
+
+- `platform`: `ios | android`
+- If the device already exists, this updates the token.
+- If the device does not exist, this registers the device and stores the token.
+
+Existing update-only endpoint:
+
+`POST /api/v1/auth/update_fcm_token`
+
+```json
+{
+  "fcm_token": "FCM_DEVICE_TOKEN_HERE",
+  "device_uuid": "device-uuid-123"
+}
+```
+
 ## Legal Documents
 
 ### List legal documents
@@ -99,9 +133,50 @@ Real-estate channels:
 
 - `OwnerDashboardChannel` — owner dashboard summary updates.
 - `PropertyChannel` — updates for one property (`property_id` required).
-- `UserNotificationsChannel` — per-user updates such as viewing status changes.
+- `UserNotificationsChannel` — real-time DB notifications and per-user updates.
 
 See `docs/REAL_ESTATE_WEBSOCKET.md` for subscribe payloads and event shapes.
+
+## Notifications
+
+All notification endpoints require Bearer auth.
+
+### List notifications
+`GET /api/v1/notifications?page=1&per_page=20`
+
+Optional:
+
+- `unread_only=true`
+- `type=property_approved`
+
+### Unread count
+`GET /api/v1/notifications/unread_count`
+
+### Show notification
+`GET /api/v1/notifications/:id`
+
+Marks the notification as read.
+
+### Mark one read
+`PATCH /api/v1/notifications/:id/mark_read`
+
+### Mark all read
+`POST /api/v1/notifications/mark_all_read`
+
+### Delete notification
+`DELETE /api/v1/notifications/:id`
+
+### Test notification
+`POST /api/v1/notifications/test`
+
+```json
+{
+  "title": "Test Notification",
+  "body": "This is a test"
+}
+```
+
+Notification create/read/delete events also broadcast on `UserNotificationsChannel`.
 
 ## Properties
 

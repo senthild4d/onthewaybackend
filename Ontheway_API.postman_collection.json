@@ -189,6 +189,30 @@
           }
         },
         {
+          "name": "Register FCM Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"FCM_DEVICE_TOKEN_HERE\",\n  \"device_uuid\": \"device-uuid-123\",\n  \"platform\": \"android\",\n  \"device_name\": \"Pixel 8\",\n  \"device_type\": \"phone\",\n  \"platform_version\": \"14\",\n  \"app_version\": \"1.0.0\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/register_fcm_token", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "register_fcm_token"] }
+          }
+        },
+        {
+          "name": "Update FCM Token (existing device)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"FCM_DEVICE_TOKEN_HERE\",\n  \"device_uuid\": \"device-uuid-123\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/api/v1/auth/update_fcm_token", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "update_fcm_token"] }
+          }
+        },
+        {
           "name": "Setup Password",
           "request": {
             "method": "POST",

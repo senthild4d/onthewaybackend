@@ -716,6 +716,73 @@ module Api
         end
       end
 
+      # POST /api/v1/auth/register_fcm_token
+      # Register or update FCM token for the current user's device.
+      # Body: fcm_token, device_uuid, platform (ios|android), optional device metadata.
+      def register_fcm_token
+        require_authentication!
+        return unless current_user
+
+        fcm_token = params[:fcm_token].to_s.strip
+        if fcm_token.blank?
+          api_error(message: 'fcm_token is required', status: :bad_request)
+          return
+        end
+
+        device_uuid = params[:device_uuid].presence
+        if device_uuid.blank? && current_user.devices.active.none?
+          api_error(message: 'device_uuid is required when no active device exists', status: :bad_request)
+          return
+        end
+
+        device = device_uuid.present? ? current_user.devices.active.find_by(device_uuid: device_uuid) : current_user.devices.active.first
+        created = false
+
+        unless device
+          platform = params[:platform].to_s.downcase
+          unless %w[ios android].include?(platform)
+            api_error(message: 'platform is required for new device and must be ios or android', status: :bad_request)
+            return
+          end
+
+          result = Device.register(
+            user: current_user,
+            device_params: params.permit(
+              :device_uuid,
+              :device_name,
+              :device_type,
+              :platform,
+              :platform_version,
+              :app_version
+            ),
+            biometric_enabled: ActiveModel::Type::Boolean.new.cast(params[:biometric_enabled])
+          )
+          device = result[:device]
+          created = true
+        end
+
+        device.update!(
+          device_name: params[:device_name].presence || device.device_name,
+          device_type: params[:device_type].presence || device.device_type,
+          platform_version: params[:platform_version].presence || device.platform_version,
+          app_version: params[:app_version].presence || device.app_version,
+          last_used_at: Time.current
+        )
+        device.update_fcm_token!(fcm_token)
+
+        api_success(
+          data: { device: device.device_info },
+          message: created ? 'FCM token registered successfully' : 'FCM token updated successfully',
+          status: created ? :created : :ok
+        )
+      rescue ActiveRecord::RecordNotUnique
+        api_error(message: 'device_uuid is already registered to another account', status: :conflict)
+      rescue => e
+        Rails.logger.error "FCM Token Registration Error: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n") if e.backtrace
+        api_error(message: 'Failed to register FCM token', data: { details: e.message }, status: :internal_server_error) unless performed?
+      end
+
       # POST /api/v1/auth/authenticate_biometric
       def authenticate_biometric
         device_token = biometric_auth_params[:device_token]

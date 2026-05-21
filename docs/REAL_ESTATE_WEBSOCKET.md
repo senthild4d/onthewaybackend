@@ -103,7 +103,7 @@ Viewing changes on the property also broadcast to this channel:
 
 ### UserNotificationsChannel
 
-Per-user stream for viewing status updates and user-targeted real-time events.
+Per-user stream for DB notifications, viewing status updates, and user-targeted real-time events.
 
 Subscribe:
 
@@ -115,6 +115,36 @@ Subscribe:
 ```
 
 ## Actions Broadcast
+
+Notification actions:
+
+- `created`
+- `read`
+- `all_read`
+- `deleted`
+
+Notification payload:
+
+```json
+{
+  "type": "notification",
+  "action": "created",
+  "notification": {
+    "id": "...",
+    "notification_type": "property_approved",
+    "title": "Property Approved",
+    "body": "Your property has been approved.",
+    "data": { "property_id": "..." },
+    "related_type": "Property",
+    "related_id": "...",
+    "read": false,
+    "read_at": null,
+    "created_at": "2026-05-21T..."
+  },
+  "unread_count": 4,
+  "timestamp": "2026-05-21T..."
+}
+```
 
 Property actions:
 

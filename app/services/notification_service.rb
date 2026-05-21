@@ -40,6 +40,8 @@ class NotificationService
         )
       end
 
+      broadcast_to_user(user, action: 'created', notification: notification)
+
       notification
     rescue => e
       Rails.logger.error "NotificationService error: #{e.message}"
@@ -49,6 +51,41 @@ class NotificationService
     # Send notification to multiple users
     def send_to_users(users, **opts)
       Array(users).map { |u| send_to_user(u, **opts) }.compact
+    end
+
+    def broadcast_to_user(user, action:, notification: nil, extra: {})
+      return nil unless user.is_a?(User)
+
+      payload = {
+        type: 'notification',
+        action: action.to_s,
+        notification: notification ? notification_payload(notification) : nil,
+        unread_count: user.notifications.unread.count,
+        timestamp: Time.current.iso8601
+      }.merge(extra || {})
+
+      ActionCable.server.broadcast(PropertyRealtimeService.user_stream(user), payload)
+      payload
+    rescue => e
+      Rails.logger.error "NotificationService broadcast error: #{e.message}"
+      nil
+    end
+
+    private
+
+    def notification_payload(notification)
+      {
+        id: notification.id,
+        notification_type: notification.notification_type,
+        title: notification.title,
+        body: notification.body,
+        data: notification.data || {},
+        related_type: notification.related_type,
+        related_id: notification.related_id,
+        read: notification.read,
+        read_at: notification.read_at&.iso8601,
+        created_at: notification.created_at&.iso8601
+      }
     end
   end
 end

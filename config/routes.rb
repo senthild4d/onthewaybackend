@@ -51,6 +51,7 @@ Rails.application.routes.draw do
       post 'auth/check_device', to: 'auth#check_device'
       post 'auth/register_device', to: 'auth#register_device'
       post 'auth/update_fcm_token', to: 'auth#update_fcm_token'
+      post 'auth/register_fcm_token', to: 'auth#register_fcm_token'
       post 'auth/authenticate_biometric', to: 'auth#authenticate_biometric'
       get 'auth/devices', to: 'auth#list_devices'
       delete 'auth/devices/:id', to: 'auth#revoke_device'

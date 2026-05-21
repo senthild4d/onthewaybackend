@@ -43,12 +43,14 @@ module Api
       # GET /api/v1/notifications/:id
       def show
         @notification.mark_read! unless @notification.read?
+        NotificationService.broadcast_to_user(current_user, action: 'read', notification: @notification.reload)
         api_success(data: { notification: notification_response(@notification.reload) }, status: :ok)
       end
 
       # PATCH /api/v1/notifications/:id/mark_read
       def mark_read
         @notification.mark_read!
+        NotificationService.broadcast_to_user(current_user, action: 'read', notification: @notification.reload)
         api_success(
           data: { notification: notification_response(@notification.reload) },
           message: 'Notification marked as read',
@@ -60,6 +62,11 @@ module Api
       def mark_all_read
         count = current_user.notifications.unread.count
         Notification.mark_all_read_for(current_user)
+        NotificationService.broadcast_to_user(
+          current_user,
+          action: 'all_read',
+          extra: { marked_count: count }
+        )
         api_success(
           data: { marked_count: count },
           message: 'All notifications marked as read',
@@ -69,7 +76,13 @@ module Api
 
       # DELETE /api/v1/notifications/:id
       def destroy
+        notification_payload = notification_response(@notification)
         @notification.destroy
+        NotificationService.broadcast_to_user(
+          current_user,
+          action: 'deleted',
+          extra: { notification: notification_payload }
+        )
         api_success(message: 'Notification deleted', data: { id: @notification.id }, status: :ok)
       end
 
