@@ -84,6 +84,8 @@ Required:
 
 Response for a new device includes `device_token`, which is used for biometric / PIN auth endpoints.
 
+If the same `device_uuid` was previously registered to another account or to an old revoked record, the old record is removed and the new registration becomes the only valid one.
+
 ### Register FCM token
 `POST /api/v1/auth/register_fcm_token`
 

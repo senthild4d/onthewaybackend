@@ -31,12 +31,16 @@ class Device < ApplicationRecord
 
   # Create a new device registration
   def self.register(user:, device_params:, biometric_enabled: false)
+    device_uuid = device_params[:device_uuid].to_s
+    where(device_uuid: device_uuid).where.not(user_id: user.id).destroy_all
+    where(device_uuid: device_uuid, user_id: user.id).where.not(status: 'active').destroy_all
+
     token = generate_token
     token_hash = hash_token(token)
 
     device = create!(
       user: user,
-      device_uuid: device_params[:device_uuid],
+      device_uuid: device_uuid,
       device_name: device_params[:device_name],
       device_type: device_params[:device_type],
       platform: device_params[:platform],

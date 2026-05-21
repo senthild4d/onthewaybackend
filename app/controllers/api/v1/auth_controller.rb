@@ -778,7 +778,13 @@ module Api
           message: created ? 'FCM token registered successfully' : 'FCM token updated successfully',
           status: created ? :created : :ok
         )
-      rescue ActiveRecord::RecordNotUnique
+      rescue ActiveRecord::RecordNotUnique => e
+        if device_uuid.present?
+          Rails.logger.warn "Retrying FCM registration after duplicate device_uuid #{device_uuid}: #{e.message}"
+          Device.where(device_uuid: device_uuid).where.not(user_id: current_user.id).destroy_all
+          retry
+        end
+
         api_error(message: 'device_uuid is already registered to another account', status: :conflict)
       rescue => e
         Rails.logger.error "FCM Token Registration Error: #{e.message}"
