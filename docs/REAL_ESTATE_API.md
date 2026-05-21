@@ -57,6 +57,33 @@ Allowed `role`: `user | owner`
 
 Auth: `Authorization: Bearer <jwt>`
 
+### Register device
+`POST /api/v1/auth/register_device`
+
+Auth: `Authorization: Bearer <jwt>`
+
+Use this after login to register the physical device. It also accepts `fcm_token`, so you can register the device and push token in one call.
+
+```json
+{
+  "device_uuid": "device-uuid-123",
+  "device_name": "Pixel 8",
+  "device_type": "phone",
+  "platform": "android",
+  "platform_version": "14",
+  "app_version": "1.0.0",
+  "biometric_enabled": false,
+  "fcm_token": "FCM_DEVICE_TOKEN_HERE"
+}
+```
+
+Required:
+
+- `device_uuid`
+- `platform`: `ios | android`
+
+Response for a new device includes `device_token`, which is used for biometric / PIN auth endpoints.
+
 ### Register FCM token
 `POST /api/v1/auth/register_fcm_token`
 
@@ -90,6 +117,40 @@ Existing update-only endpoint:
   "device_uuid": "device-uuid-123"
 }
 ```
+
+### Device list / biometric / revoke
+
+All endpoints require Bearer auth.
+
+List active devices:
+
+`GET /api/v1/auth/devices`
+
+Enable biometric:
+
+`POST /api/v1/auth/devices/:device_id/enable_biometric`
+
+Also supports existing route:
+
+`PATCH /api/v1/auth/devices/:device_id/enable_biometric`
+
+Disable biometric:
+
+`POST /api/v1/auth/devices/:device_id/disable_biometric`
+
+Also supports existing route:
+
+`PATCH /api/v1/auth/devices/:device_id/disable_biometric`
+
+Revoke device:
+
+`POST /api/v1/auth/devices/:device_id/revoke`
+
+Also supports existing route:
+
+`DELETE /api/v1/auth/devices/:device_id`
+
+Use `device_id` from the `GET /api/v1/auth/devices` response.
 
 ## Legal Documents
 

@@ -55,8 +55,11 @@ Rails.application.routes.draw do
       post 'auth/authenticate_biometric', to: 'auth#authenticate_biometric'
       get 'auth/devices', to: 'auth#list_devices'
       delete 'auth/devices/:id', to: 'auth#revoke_device'
+      post 'auth/devices/:id/revoke', to: 'auth#revoke_device'
       patch 'auth/devices/:id/enable_biometric', to: 'auth#enable_biometric'
+      post 'auth/devices/:id/enable_biometric', to: 'auth#enable_biometric'
       patch 'auth/devices/:id/disable_biometric', to: 'auth#disable_biometric'
+      post 'auth/devices/:id/disable_biometric', to: 'auth#disable_biometric'
       
       # PIN Authentication routes
       post 'auth/authenticate_pin', to: 'auth#authenticate_pin'
