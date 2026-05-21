@@ -79,6 +79,8 @@ module Api
       # GET /api/v1/auth/me
       def me
         require_authentication!
+        return if performed?
+
         api_success(data: { user: user_response(current_user) }, status: :ok)
       end
 
@@ -614,6 +616,7 @@ module Api
       # POST /api/v1/auth/register_device
       def register_device
         require_authentication!
+        return if performed?
         
         device_params_hash = device_registration_params
         biometric_enabled = device_params_hash[:biometric_enabled] == true || device_params_hash[:biometric_enabled] == 'true'
@@ -670,14 +673,14 @@ module Api
         end
       rescue => e
         Rails.logger.error "Device Registration Error: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
-        api_error(message: 'Failed to register device', data: { details: e.message }, status: :internal_server_error)
+        Rails.logger.error e.backtrace.join("\n") if e.backtrace
+        api_error(message: 'Failed to register device', data: { details: e.message }, status: :internal_server_error) unless performed?
       end
 
       # POST /api/v1/auth/update_fcm_token
       def update_fcm_token
         require_authentication!
-        return unless current_user  # Guard: ensure current_user is set after require_authentication!
+        return if performed?
         
         fcm_token = params[:fcm_token]
         device_uuid = params[:device_uuid]
@@ -721,7 +724,7 @@ module Api
       # Body: fcm_token, device_uuid, platform (ios|android), optional device metadata.
       def register_fcm_token
         require_authentication!
-        return unless current_user
+        return if performed?
 
         fcm_token = params[:fcm_token].to_s.strip
         if fcm_token.blank?
@@ -938,6 +941,7 @@ module Api
       # DELETE /api/v1/auth/devices/:id
       def revoke_device
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -957,6 +961,7 @@ module Api
       # PATCH /api/v1/auth/devices/:id/enable_biometric
       def enable_biometric
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -980,6 +985,7 @@ module Api
       # PATCH /api/v1/auth/devices/:id/disable_biometric
       def disable_biometric
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -1003,6 +1009,7 @@ module Api
       # POST /api/v1/auth/devices/:id/setup_pin
       def setup_pin
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -1052,6 +1059,7 @@ module Api
       # PATCH /api/v1/auth/devices/:id/enable_pin
       def enable_pin
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -1095,6 +1103,7 @@ module Api
       # PATCH /api/v1/auth/devices/:id/disable_pin
       def disable_pin
         require_authentication!
+        return if performed?
         
         device = current_user.devices.find_by(id: params[:id])
         
@@ -1119,6 +1128,7 @@ module Api
       # Setup password after registration (optional)
       def setup_password
         require_authentication!
+        return if performed?
         
         password = params[:password]
         password_confirmation = params[:password_confirmation]
