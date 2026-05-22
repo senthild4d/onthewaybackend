@@ -113,6 +113,24 @@ On success, response includes a fresh login token.
 
 Auth: `Authorization: Bearer <jwt>`
 
+Get valid reasons:
+
+`GET /api/v1/users/me/delete_reasons`
+
+Response:
+
+```json
+{
+  "reasons": [
+    { "value": "leaving_temporarily", "label": "I am leaving temporarily" },
+    { "value": "privacy_security", "label": "Privacy and security issues" },
+    { "value": "trouble_getting_started", "label": "Having trouble getting started" },
+    { "value": "multiple_accounts", "label": "I have multiple accounts" },
+    { "value": "other", "label": "Other reason" }
+  ]
+}
+```
+
 Preferred:
 
 `DELETE /api/v1/users/me`
@@ -125,10 +143,16 @@ Optional JSON body:
 
 ```json
 {
-  "reason": "Other reason",
+  "reason": "other",
   "additional_feedback": "No longer need the app"
 }
 ```
+
+If the client cannot send a JSON body with `DELETE`, pass it as query params:
+
+`DELETE /api/v1/users/me?reason=other&additional_feedback=No%20longer%20need%20the%20app`
+
+`reason` is required for delete account.
 
 This permanently deletes the account and attached profile picture. Use `POST /api/v1/users/me/deactivate` if the user only wants to disable the account.
 

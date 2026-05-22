@@ -250,8 +250,7 @@ module Api
       
       # POST /api/v1/users/me/deactivate
       def deactivate
-        reason = params[:reason]
-        additional_feedback = params[:additional_feedback]
+        reason, additional_feedback = account_closure_params
         
         begin
           current_user.deactivate!(reason: reason, additional_feedback: additional_feedback)
@@ -275,8 +274,11 @@ module Api
       
       # POST /api/v1/users/me/delete
       def delete_account
-        reason = params[:reason]
-        additional_feedback = params[:additional_feedback]
+        reason, additional_feedback = account_closure_params
+        if reason.blank?
+          api_error(message: 'reason is required', status: :bad_request)
+          return
+        end
 
         begin
           user_id = current_user.id
@@ -297,6 +299,16 @@ module Api
           Rails.logger.error "Delete account error: #{e.message}"
           api_error(message: e.message, status: :unprocessable_entity)
         end
+      end
+
+      # GET /api/v1/users/me/delete_reasons
+      def delete_reasons
+        api_success(
+          data: {
+            reasons: UserDeactivation::REASONS.map { |value, label| { value: value, label: label } }
+          },
+          status: :ok
+        )
       end
 
       # POST /api/v1/users/me/reactivate (Admin only or support feature)
@@ -627,6 +639,21 @@ module Api
         end
 
         { settings: sanitized }
+      end
+
+      def account_closure_params
+        reason = params[:reason].presence ||
+                 params[:delete_reason].presence ||
+                 params[:deletion_reason].presence ||
+                 params.dig(:account, :reason).presence ||
+                 params.dig(:user, :reason).presence
+
+        additional_feedback = params[:additional_feedback].presence ||
+                              params[:feedback].presence ||
+                              params.dig(:account, :additional_feedback).presence ||
+                              params.dig(:user, :additional_feedback).presence
+
+        [reason, additional_feedback]
       end
       
       def set_user

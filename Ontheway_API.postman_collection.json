@@ -406,11 +406,18 @@
           }
         },
         {
+          "name": "Delete Account Reasons",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/me/delete_reasons", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "delete_reasons"] }
+          }
+        },
+        {
           "name": "Delete Account (legacy POST)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Other reason\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"other\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
             "url": { "raw": "{{base_url}}/api/v1/users/me/delete", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "delete"] }
           }
         },
@@ -419,8 +426,23 @@
           "request": {
             "method": "DELETE",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
-            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Other reason\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"other\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
             "url": { "raw": "{{base_url}}/api/v1/users/me", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me"] }
+          }
+        },
+        {
+          "name": "Delete Account (query params)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/v1/users/me?reason=other&additional_feedback=No%20longer%20need%20the%20app",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "users", "me"],
+              "query": [
+                { "key": "reason", "value": "other" },
+                { "key": "additional_feedback", "value": "No longer need the app" }
+              ]
+            }
           }
         },
         {

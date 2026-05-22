@@ -26,6 +26,7 @@ Rails.application.routes.draw do
       
       # User profile management
       get 'users/me', to: 'users#me'
+      get 'users/me/delete_reasons', to: 'users#delete_reasons'
       get 'users/me/push_notification_settings', to: 'users#push_notification_settings'
       patch 'users/me/push_notification_settings', to: 'users#update_push_notification_settings'
       get 'users/:id/share_qr', to: 'users#share_qr'

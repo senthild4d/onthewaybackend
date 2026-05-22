@@ -1,18 +1,17 @@
 class UserDeactivation < ApplicationRecord
+  REASONS = {
+    'leaving_temporarily' => 'I am leaving temporarily',
+    'privacy_security' => 'Privacy and security issues',
+    'trouble_getting_started' => 'Having trouble getting started',
+    'multiple_accounts' => 'I have multiple accounts',
+    'other' => 'Other reason'
+  }.freeze
+
   belongs_to :user
 
   # Validations
   validates :deactivated_at, presence: true
-  validates :reason, inclusion: { 
-    in: [
-      'leaving_temporarily',
-      'privacy_security',
-      'trouble_getting_started',
-      'multiple_accounts',
-      'other'
-    ], 
-    allow_nil: true 
-  }
+  validates :reason, inclusion: { in: REASONS.keys, allow_nil: true }
 
   # Scopes
   scope :active, -> { where(reactivated_at: nil) }
@@ -55,20 +54,7 @@ class UserDeactivation < ApplicationRecord
   end
 
   def human_readable_reason
-    case reason
-    when 'leaving_temporarily'
-      'I am leaving temporarily'
-    when 'privacy_security'
-      'Privacy and security issues'
-    when 'trouble_getting_started'
-      'Having trouble getting started'
-    when 'multiple_accounts'
-      'I have multiple accounts'
-    when 'other'
-      'Other reason'
-    else
-      'No reason provided'
-    end
+    REASONS[reason] || 'No reason provided'
   end
 end
 
