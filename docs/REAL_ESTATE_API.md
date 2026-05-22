@@ -57,6 +57,81 @@ Allowed `role`: `user | owner`
 
 Auth: `Authorization: Bearer <jwt>`
 
+### Forgot password
+
+Step 1: request reset OTP.
+
+`POST /api/v1/auth/forgot_password`
+
+By email:
+
+```json
+{ "email": "user@example.com" }
+```
+
+By phone:
+
+```json
+{ "phone": "9876543210" }
+```
+
+Step 2: verify reset OTP and get `reset_token`.
+
+`POST /api/v1/auth/verify_reset_otp`
+
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
+
+Response:
+
+```json
+{
+  "reset_token": "...",
+  "expires_in": "15 minutes"
+}
+```
+
+Step 3: reset password.
+
+`POST /api/v1/auth/reset_password`
+
+```json
+{
+  "reset_token": "...",
+  "password": "NewPassword123",
+  "password_confirmation": "NewPassword123"
+}
+```
+
+On success, response includes a fresh login token.
+
+### Delete account
+
+Auth: `Authorization: Bearer <jwt>`
+
+Preferred:
+
+`DELETE /api/v1/users/me`
+
+Also supported:
+
+`POST /api/v1/users/me/delete`
+
+Optional JSON body:
+
+```json
+{
+  "reason": "Other reason",
+  "additional_feedback": "No longer need the app"
+}
+```
+
+This permanently deletes the account and attached profile picture. Use `POST /api/v1/users/me/deactivate` if the user only wants to disable the account.
+
 ### Register device
 `POST /api/v1/auth/register_device`
 

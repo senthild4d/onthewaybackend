@@ -406,12 +406,21 @@
           }
         },
         {
-          "name": "Delete Account",
+          "name": "Delete Account (legacy POST)",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Other reason\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
             "url": { "raw": "{{base_url}}/api/v1/users/me/delete", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me", "delete"] }
+          }
+        },
+        {
+          "name": "Delete Account (DELETE /users/me)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Other reason\",\n  \"additional_feedback\": \"No longer need the app\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/users/me", "host": ["{{base_url}}"], "path": ["api", "v1", "users", "me"] }
           }
         },
         {

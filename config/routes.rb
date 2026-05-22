@@ -40,6 +40,7 @@ Rails.application.routes.draw do
       post 'users/me/unlink_phone', to: 'users#unlink_phone'
       post 'users/me/deactivate', to: 'users#deactivate'
       post 'users/me/delete', to: 'users#delete_account'
+      delete 'users/me', to: 'users#delete_account'
       post 'users/me/reactivate', to: 'users#reactivate'
       
       # OTP Authentication routes
