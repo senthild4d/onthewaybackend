@@ -79,6 +79,19 @@ Step 2: reset password with OTP code.
 
 `POST /api/v1/auth/reset_password`
 
+Preferred generic identifier:
+
+```json
+{
+  "identifier": "+917022655632",
+  "code": "123456",
+  "password": "Password123",
+  "password_confirmation": "Password123"
+}
+```
+
+Email:
+
 ```json
 {
   "email": "user@example.com",
@@ -98,6 +111,8 @@ Phone also works:
   "password_confirmation": "Password123"
 }
 ```
+
+For compatibility, if a phone number is sent in `email` (for example `"email": "+917022655632"`), the API treats it as a phone number.
 
 On success, response includes a fresh login token.
 

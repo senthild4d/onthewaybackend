@@ -409,8 +409,7 @@ module Api
       # POST /api/v1/auth/forgot_password
       # Send a password reset OTP to phone or email
       def forgot_password
-        phone = normalize_phone(params[:phone]) if params[:phone].present?
-        email = params[:email]&.downcase&.strip
+        phone, email = reset_identifier_params
 
         if phone.blank? && email.blank?
           api_error(message: 'Either phone or email is required', status: :bad_request)
@@ -473,8 +472,7 @@ module Api
       # POST /api/v1/auth/verify_reset_otp
       # Verify the reset OTP and return a reset_token to be used with reset_password
       def verify_reset_otp
-        phone = normalize_phone(params[:phone]) if params[:phone].present?
-        email = params[:email]&.downcase&.strip
+        phone, email = reset_identifier_params
         code = params[:code]
 
         if phone.blank? && email.blank?
@@ -555,8 +553,7 @@ module Api
       # POST /api/v1/auth/reset_password
       def reset_password
         reset_token = params[:reset_token]
-        phone = normalize_phone(params[:phone]) if params[:phone].present?
-        email = params[:email]&.downcase&.strip
+        phone, email = reset_identifier_params
         code = params[:code].to_s
         password = params[:password]
         password_confirmation = params[:password_confirmation]
@@ -1412,6 +1409,26 @@ module Api
 
       def pin_auth_params
         params.permit(:device_token, :device_uuid, :pin)
+      end
+
+      def reset_identifier_params
+        raw_phone = params[:phone].presence
+        raw_email = params[:email].presence
+        raw_identifier = params[:identifier].presence || params[:login].presence
+
+        if raw_phone.present?
+          return [normalize_phone(raw_phone), nil]
+        end
+
+        candidate = raw_email || raw_identifier
+        return [nil, nil] if candidate.blank?
+
+        candidate = candidate.to_s.strip
+        if candidate.match?(/\A\+?\d[\d\s\-\(\)]*\z/)
+          [normalize_phone(candidate), nil]
+        else
+          [nil, candidate.downcase]
+        end
       end
 
       def normalize_phone(phone)
