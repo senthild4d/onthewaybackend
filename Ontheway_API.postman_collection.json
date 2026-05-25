@@ -293,7 +293,17 @@
           }
         },
         {
-          "name": "Reset Password",
+          "name": "Reset Password (email + OTP code)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"user@example.com\",\n  \"code\": \"123456\",\n  \"password\": \"Password123\",\n  \"password_confirmation\": \"Password123\"\n}" },
+            "url": { "raw": "{{base_url}}/api/v1/auth/reset_password", "host": ["{{base_url}}"], "path": ["api", "v1", "auth", "reset_password"] }
+          }
+        },
+        {
+          "name": "Reset Password (legacy reset_token)",
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",

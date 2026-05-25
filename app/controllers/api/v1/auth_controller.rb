@@ -555,13 +555,11 @@ module Api
       # POST /api/v1/auth/reset_password
       def reset_password
         reset_token = params[:reset_token]
+        phone = normalize_phone(params[:phone]) if params[:phone].present?
+        email = params[:email]&.downcase&.strip
+        code = params[:code].to_s
         password = params[:password]
         password_confirmation = params[:password_confirmation]
-
-        if reset_token.blank?
-          api_error(message: 'Reset token is required', status: :bad_request)
-          return
-        end
 
         if password.blank?
           api_error(message: 'Password is required', status: :bad_request)
@@ -578,20 +576,21 @@ module Api
           return
         end
 
-        begin
-          decoded = JsonWebToken.decode(reset_token)
-          if decoded[:purpose].to_s != 'password_reset'
-            api_error(message: 'Invalid reset token', status: :bad_request)
-            return
-          end
-          user = User.find_by(id: decoded[:user_id])
-        rescue => e
-          api_error(message: 'Invalid or expired reset token', status: :bad_request)
-          return
-        end
+        user = if reset_token.present?
+                 user_from_reset_token(reset_token)
+               else
+                 user_from_reset_otp(phone: phone, email: email, code: code)
+               end
+
+        return if performed?
 
         unless user
           api_error(message: 'User not found', status: :not_found)
+          return
+        end
+
+        if user.status_disabled?
+          api_error(message: 'Account is disabled', status: :bad_request)
           return
         end
 
@@ -1331,6 +1330,68 @@ module Api
 
       def verify_otp_params
         params.permit(:phone, :email, :code)
+      end
+
+      def user_from_reset_token(reset_token)
+        decoded = JsonWebToken.decode(reset_token)
+        if decoded.blank? || decoded[:purpose].to_s != 'password_reset'
+          api_error(message: 'Invalid or expired reset token', status: :bad_request)
+          return nil
+        end
+
+        User.find_by(id: decoded[:user_id])
+      rescue => e
+        api_error(message: 'Invalid or expired reset token', status: :bad_request)
+        nil
+      end
+
+      def user_from_reset_otp(phone:, email:, code:)
+        if phone.blank? && email.blank?
+          api_error(message: 'Either phone or email is required', status: :bad_request)
+          return nil
+        end
+
+        if code.blank?
+          api_error(message: 'OTP code is required', status: :bad_request)
+          return nil
+        end
+
+        otp = if phone.present?
+                Otp.for_phone(phone).where(verified: false).order(created_at: :desc).first
+              else
+                Otp.for_email(email).where(verified: false).order(created_at: :desc).first
+              end
+
+        unless otp
+          api_error(message: 'No OTP found. Please request a new reset code.', status: :bad_request)
+          return nil
+        end
+
+        if otp.expired?
+          api_error(message: 'OTP has expired. Please request a new one.', status: :bad_request)
+          return nil
+        end
+
+        if otp.max_attempts_reached?
+          api_error(message: 'Maximum attempts reached. Please request a new OTP.', status: :bad_request)
+          return nil
+        end
+
+        unless otp.code == code
+          otp.increment_attempts!
+          remaining = Otp::MAX_ATTEMPTS - otp.attempts
+          api_error(message: 'Invalid OTP code', data: { remaining_attempts: remaining }, status: :bad_request)
+          return nil
+        end
+
+        user = if phone.present?
+                 User.find_by(phone: phone)
+               else
+                 User.find_by(email: email)
+               end
+
+        otp.mark_verified! if user
+        user
       end
 
       def device_registration_params

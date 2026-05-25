@@ -75,7 +75,33 @@ By phone:
 { "phone": "9876543210" }
 ```
 
-Step 2: verify reset OTP and get `reset_token`.
+Step 2: reset password with OTP code.
+
+`POST /api/v1/auth/reset_password`
+
+```json
+{
+  "email": "user@example.com",
+  "code": "123456",
+  "password": "Password123",
+  "password_confirmation": "Password123"
+}
+```
+
+Phone also works:
+
+```json
+{
+  "phone": "9876543210",
+  "code": "123456",
+  "password": "Password123",
+  "password_confirmation": "Password123"
+}
+```
+
+On success, response includes a fresh login token.
+
+Legacy optional flow: verify reset OTP and get `reset_token`.
 
 `POST /api/v1/auth/verify_reset_otp`
 
@@ -95,7 +121,7 @@ Response:
 }
 ```
 
-Step 3: reset password.
+Then reset with token:
 
 `POST /api/v1/auth/reset_password`
 
@@ -106,8 +132,6 @@ Step 3: reset password.
   "password_confirmation": "NewPassword123"
 }
 ```
-
-On success, response includes a fresh login token.
 
 ### Delete account
 
