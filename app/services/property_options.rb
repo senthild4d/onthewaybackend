@@ -89,23 +89,23 @@ class PropertyOptions
 
     def currencies
       [
-        { value: 'USD', label: 'US Dollar', symbol: '$' },
-        { value: 'USDT', label: 'Tether (USDT)', symbol: 'USDT' },
-        { value: 'EUR', label: 'Euro', symbol: '€' },
-        { value: 'GBP', label: 'British Pound', symbol: '£' },
-        { value: 'AED', label: 'UAE Dirham', symbol: 'د.إ' },
-        { value: 'SAR', label: 'Saudi Riyal', symbol: '﷼' },
-        { value: 'INR', label: 'Indian Rupee', symbol: '₹' },
-        { value: 'PKR', label: 'Pakistani Rupee', symbol: '₨' },
-        { value: 'CAD', label: 'Canadian Dollar', symbol: 'C$' },
-        { value: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
-        { value: 'SGD', label: 'Singapore Dollar', symbol: 'S$' },
-        { value: 'QAR', label: 'Qatari Riyal', symbol: 'ر.ق' },
-        { value: 'KWD', label: 'Kuwaiti Dinar', symbol: 'د.ك' },
-        { value: 'BHD', label: 'Bahraini Dinar', symbol: '.د.ب' },
-        { value: 'OMR', label: 'Omani Rial', symbol: 'ر.ع.' },
-        { value: 'EGP', label: 'Egyptian Pound', symbol: 'E£' },
-        { value: 'TRY', label: 'Turkish Lira', symbol: '₺' }
+        # { value: 'USD', label: 'US Dollar', symbol: '$' },
+        { value: 'USDT', label: 'Tether (USDT)', symbol: 'USDT' }
+        # { value: 'EUR', label: 'Euro', symbol: '€' },
+        # { value: 'GBP', label: 'British Pound', symbol: '£' },
+        # { value: 'AED', label: 'UAE Dirham', symbol: 'د.إ' },
+        # { value: 'SAR', label: 'Saudi Riyal', symbol: '﷼' },
+        # { value: 'INR', label: 'Indian Rupee', symbol: '₹' },
+        # { value: 'PKR', label: 'Pakistani Rupee', symbol: '₨' },
+        # { value: 'CAD', label: 'Canadian Dollar', symbol: 'C$' },
+        # { value: 'AUD', label: 'Australian Dollar', symbol: 'A$' },
+        # { value: 'SGD', label: 'Singapore Dollar', symbol: 'S$' },
+        # { value: 'QAR', label: 'Qatari Riyal', symbol: 'ر.ق' },
+        # { value: 'KWD', label: 'Kuwaiti Dinar', symbol: 'د.ك' },
+        # { value: 'BHD', label: 'Bahraini Dinar', symbol: '.د.ب' },
+        # { value: 'OMR', label: 'Omani Rial', symbol: 'ر.ع.' },
+        # { value: 'EGP', label: 'Egyptian Pound', symbol: 'E£' },
+        # { value: 'TRY', label: 'Turkish Lira', symbol: '₺' }
       ]
     end
 
