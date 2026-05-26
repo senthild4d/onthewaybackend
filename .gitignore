@@ -2,8 +2,7 @@
 .byebug_history
 
 # Rails
-log/*
-log/*.log
+log/
 tmp/*
 !/tmp/.keep
 

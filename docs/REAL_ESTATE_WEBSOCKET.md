@@ -172,7 +172,7 @@ Viewing actions:
 ## Postman Quick Test
 
 1. Open a WebSocket request.
-2. Connect to `wss://vibesapp.digital4design.com/ontheway/cable?token=<jwt_token>`.
+2. Connect to `wss://vibesapp.digital4design.com/cryaltor/cable?token=<jwt_token>`.
 3. Send one subscribe message from above.
 4. Keep the socket open.
 5. Trigger a REST action, for example `POST /api/v1/properties/:id/360_video`.

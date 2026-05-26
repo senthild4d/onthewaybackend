@@ -41,7 +41,7 @@ module Vibes
     # Skip views, helpers and assets when generating a new resource.
     config.api_only = true
 
-    # App is mounted at /ontheway subpath behind reverse proxy
-    config.relative_url_root = ENV.fetch('RAILS_RELATIVE_URL_ROOT', '/ontheway')
+    # App is mounted at /cryaltor subpath behind reverse proxy
+    config.relative_url_root = ENV.fetch('RAILS_RELATIVE_URL_ROOT', '/cryaltor')
   end
 end

@@ -1,6 +1,8 @@
 Rails.application.routes.draw do
   # Health check
   get "up" => "rails/health#show", as: :rails_health_check
+  get "privacy_policy", to: "public_pages#privacy_policy"
+  get "support_url", to: "public_pages#support_url"
 
   # API routes
   namespace :api do
@@ -16,6 +18,7 @@ Rails.application.routes.draw do
         resources :tickets, controller: 'support_tickets', only: [:index, :show, :update, :create]
         get 'tickets/my', to: 'support_tickets#my'
         get 'reasons', to: 'support_tickets#reasons'
+        get 'ticket_options', to: 'support_tickets#ticket_options'
       end
       
       # Authentication routes

@@ -5,13 +5,19 @@ module Api
     class SupportTicketsController < ApplicationController
       before_action :require_authentication!
       before_action :set_ticket, only: [:show, :update]
-      before_action :require_support_or_admin!, only: [:index, :show, :update, :reasons]
+      before_action :require_support_or_admin!, only: [:index, :show, :update]
 
       # POST /api/v1/support/tickets
       def create
         ticket = SupportTicket.new(ticket_params)
         ticket.user = current_user
         ticket.status = 'open'
+        normalize_related_fields(ticket)
+
+        unless related_record_allowed?(ticket)
+          api_error(message: 'Related property or viewing is not available for this user', status: :unprocessable_entity)
+          return
+        end
 
         if ticket.save
           api_success(
@@ -91,6 +97,22 @@ module Api
         )
       end
 
+      # GET /api/v1/support/ticket_options
+      def ticket_options
+        api_success(
+          data: {
+            reasons: reason_options,
+            related_types: [
+              { key: 'property', label: 'Property' },
+              { key: 'property_viewing', label: 'Property Viewing' }
+            ],
+            properties: support_property_options,
+            property_viewings: support_property_viewing_options
+          },
+          status: :ok
+        )
+      end
+
       private
 
       def set_ticket
@@ -114,6 +136,82 @@ module Api
           :related_type,
           :related_id
         )
+      end
+
+      def normalize_related_fields(ticket)
+        ticket.related_type = ticket.related_type.to_s.underscore.presence
+      end
+
+      def related_record_allowed?(ticket)
+        return true if ticket.related_type.blank? && ticket.related_id.blank?
+        return false if ticket.related_type.blank? || ticket.related_id.blank?
+
+        case ticket.related_type
+        when 'property'
+          user_related_properties.exists?(id: ticket.related_id)
+        when 'property_viewing'
+          current_user.property_viewings.exists?(id: ticket.related_id)
+        else
+          false
+        end
+      end
+
+      def reason_options
+        SupportTicket::REASONS.map do |key|
+          {
+            key: key,
+            label: key.humanize
+          }
+        end
+      end
+
+      def support_property_options
+        user_related_properties
+          .order(created_at: :desc)
+          .limit(100)
+          .map do |property|
+            {
+              id: property.id,
+              label: property_dropdown_label(property),
+              title: property.title,
+              purpose: property.purpose,
+              listing_status: property.listing_status,
+              approval_status: property.approval_status
+            }
+          end
+      end
+
+      def support_property_viewing_options
+        current_user.property_viewings
+                    .includes(:property)
+                    .recent
+                    .limit(100)
+                    .map do |viewing|
+          property = viewing.property
+          {
+            id: viewing.id,
+            label: property_viewing_dropdown_label(viewing),
+            property_id: property&.id,
+            property_title: property&.title,
+            status: viewing.status,
+            requested_for: viewing.requested_for&.iso8601
+          }
+        end
+      end
+
+      def user_related_properties
+        viewed_property_ids = current_user.property_viewings.select(:property_id)
+        Property.where(owner_id: current_user.id).or(Property.where(id: viewed_property_ids)).distinct
+      end
+
+      def property_dropdown_label(property)
+        [property.title, property.city].compact.join(' - ')
+      end
+
+      def property_viewing_dropdown_label(viewing)
+        property_title = viewing.property&.title || 'Property'
+        date = viewing.requested_for&.strftime('%d %b %Y')
+        ["Viewing #{viewing.id}", property_title, date].compact.join(' - ')
       end
 
       def ticket_update_params
