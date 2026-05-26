@@ -3241,6 +3241,38 @@
           "response": []
         },
         {
+          "name": "Delete My Support Ticket",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/support/tickets/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "support",
+                "tickets",
+                "{{ticket_id}}"
+              ]
+            },
+            "description": "Delete a support ticket created by the current authenticated user. Users can delete only their own tickets."
+          },
+          "response": []
+        },
+        {
           "name": "Create Support Ticket - Property Viewing",
           "request": {
             "auth": {

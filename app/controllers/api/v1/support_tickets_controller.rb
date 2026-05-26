@@ -82,6 +82,22 @@ module Api
         end
       end
 
+      # DELETE /api/v1/support/tickets/:id
+      def destroy
+        ticket = SupportTicket.find_by(id: params[:id], user_id: current_user.id)
+        unless ticket
+          api_error(message: 'Ticket not found', status: :not_found)
+          return
+        end
+
+        ticket.destroy!
+        api_success(
+          data: { id: params[:id] },
+          message: 'Support ticket deleted',
+          status: :ok
+        )
+      end
+
       # GET /api/v1/support/reasons
       def reasons
         api_success(

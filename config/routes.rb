@@ -15,7 +15,7 @@ Rails.application.routes.draw do
       # Support team moderation (country-level)
       scope :support do
         # Support tickets
-        resources :tickets, controller: 'support_tickets', only: [:index, :show, :update, :create]
+        resources :tickets, controller: 'support_tickets', only: [:index, :show, :update, :create, :destroy]
         get 'tickets/my', to: 'support_tickets#my'
         get 'reasons', to: 'support_tickets#reasons'
         get 'ticket_options', to: 'support_tickets#ticket_options'
